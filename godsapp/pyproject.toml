@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "godsapp"
-version = "0.1.0"
+version = "0.3.0"
 description = "GodsApp — Professional security auditing and research suite (native GTK4 Linux desktop application)"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }

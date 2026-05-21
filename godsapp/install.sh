@@ -121,7 +121,8 @@ cp "${SRC_DIR}/README.md" "${APP_DIR}/README.md" 2>/dev/null || true
 echo "==> Creating venv (with system site-packages for PyGObject)"
 "$PYTHON" -m venv --system-site-packages "${VENV}"
 "${VENV}/bin/pip" install --upgrade pip wheel
-echo "==> Installing godsapp into the venv"
+echo "==> Installing godsapp into the venv (force-reinstall so upgrades always replace old code)"
+"${VENV}/bin/pip" install --force-reinstall --no-deps "${APP_DIR}"
 "${VENV}/bin/pip" install "${APP_DIR}"
 
 # 4. Launcher scripts (so users never need PYTHONPATH)
