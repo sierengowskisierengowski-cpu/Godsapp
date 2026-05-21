@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+
+export PYBUILD_NAME=godsapp
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+override_dh_auto_install:
+	dh_auto_install
+	install -D -m 0644 packaging/com.sierengowski.GodsApp.svg \
+		debian/godsapp/usr/share/icons/hicolor/scalable/apps/com.sierengowski.GodsApp.svg
+	install -D -m 0644 debian/godsapp.desktop \
+		debian/godsapp/usr/share/applications/com.sierengowski.GodsApp.desktop
+	install -D -m 0644 debian/godsapp-api.service \
+		debian/godsapp/usr/lib/systemd/user/godsapp-api.service

@@ -1,0 +1,13 @@
+[Unit]
+Description=GodsApp REST API
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/godsapp-cli api start
+Restart=on-failure
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=GodsApp
+GenericName=Security Research Suite
+Comment=Professional security auditing and research suite
+Exec=godsapp %U
+Icon=com.sierengowski.GodsApp
+Categories=Security;Network;System;
+Terminal=false
+StartupNotify=true
+StartupWMClass=com.sierengowski.GodsApp

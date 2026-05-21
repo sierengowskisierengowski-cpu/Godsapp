@@ -1,0 +1,32 @@
+app-id: com.sierengowski.GodsApp
+runtime: org.gnome.Platform
+runtime-version: '46'
+sdk: org.gnome.Sdk
+command: godsapp
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Notifications
+modules:
+  - name: python-deps
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps SQLAlchemy fastapi uvicorn pydantic
+        pydantic-settings click rich httpx dnspython psutil platformdirs
+        python-dateutil argon2-cffi cryptography
+    sources: []
+  - name: godsapp
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps .
+      - install -Dm644 packaging/com.sierengowski.GodsApp.svg
+        /app/share/icons/hicolor/scalable/apps/com.sierengowski.GodsApp.svg
+      - install -Dm644 packaging/debian/godsapp.desktop
+        /app/share/applications/com.sierengowski.GodsApp.desktop
+    sources:
+      - type: dir
+        path: ../..

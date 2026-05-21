@@ -1,0 +1,113 @@
+/* GodsApp styling — warm cream/ivory palette on dark base */
+
+@define-color godsapp_cream     #d4b87a;
+@define-color godsapp_ivory     #ebd7af;
+@define-color godsapp_bg_dark   #15110d;
+@define-color godsapp_panel     #1d1812;
+@define-color godsapp_panel_alt #251d15;
+@define-color godsapp_border    #3a2f22;
+@define-color godsapp_muted     #a89272;
+@define-color godsapp_critical  #d65a5a;
+@define-color godsapp_high      #d68a3c;
+@define-color godsapp_warning   #d6c43c;
+@define-color godsapp_success   #6abf6a;
+
+.godsapp-window {
+  background-color: @godsapp_bg_dark;
+}
+
+.title-box .title-bolt {
+  color: @godsapp_cream;
+  font-size: 16px;
+  font-weight: 700;
+}
+.title-box .title-main {
+  color: @godsapp_ivory;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.health-dot { font-size: 14px; padding: 0 8px; }
+.health-dot.ok    { color: @godsapp_success; }
+.health-dot.warn  { color: @godsapp_warning; }
+.health-dot.err   { color: @godsapp_critical; }
+
+.sidebar-root,
+.navigation-sidebar {
+  background-color: @godsapp_panel;
+}
+.category-header .category-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: @godsapp_muted;
+}
+.category-header .category-count {
+  font-size: 10px;
+  color: @godsapp_muted;
+  padding: 0 6px;
+  border: 1px solid @godsapp_border;
+  border-radius: 8px;
+}
+.tool-row .tool-dot { color: @godsapp_cream; }
+.tool-row:hover { background-color: alpha(@godsapp_cream, 0.08); }
+.pinned-row { font-weight: 600; }
+
+.dashboard-root,
+.view-title {
+  color: @godsapp_ivory;
+}
+.view-title { font-size: 20px; font-weight: 700; letter-spacing: 0.04em; }
+.hero-title { font-size: 26px; font-weight: 700; color: @godsapp_ivory; }
+.hero-sub   { color: @godsapp_muted; }
+
+.stat-tile {
+  background-color: @godsapp_panel;
+  border: 1px solid @godsapp_border;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.stat-title { font-size: 10px; letter-spacing: 0.15em; color: @godsapp_muted; }
+.stat-value { font-size: 28px; font-weight: 700; color: @godsapp_cream; }
+
+.card {
+  background-color: @godsapp_panel;
+  border: 1px solid @godsapp_border;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.card-title { font-weight: 600; color: @godsapp_ivory; }
+.status-body { font-family: monospace; color: @godsapp_muted; }
+
+.output-pane text {
+  background-color: @godsapp_bg_dark;
+  color: @godsapp_ivory;
+  font-family: "JetBrains Mono", monospace;
+  padding: 8px;
+}
+
+.section-title {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: @godsapp_muted;
+  font-weight: 700;
+}
+
+.finding-row {
+  background-color: @godsapp_panel_alt;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 2px 0;
+}
+.severity-badge {
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border-radius: 4px;
+}
+.sev-info     { background: alpha(@godsapp_muted, 0.20); color: @godsapp_muted; }
+.sev-low      { background: alpha(@godsapp_cream, 0.22); color: @godsapp_cream; }
+.sev-medium   { background: alpha(@godsapp_warning, 0.22); color: @godsapp_warning; }
+.sev-high     { background: alpha(@godsapp_high, 0.24); color: @godsapp_high; }
+.sev-critical { background: alpha(@godsapp_critical, 0.26); color: @godsapp_critical; }
