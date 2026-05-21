@@ -400,3 +400,81 @@ button.destructive-action:hover { background-color: alpha(@godsapp_critical,.34)
 .godsapp-splash .splash-version  { color: @godsapp_muted; font-size: 11px; }
 .godsapp-splash .splash-progress { color: @godsapp_olympus; font-size: 10px; letter-spacing: 0.22em; }
 .godsapp-splash .splash-logo     { color: @godsapp_cloud_high; }
+
+/* ── slide-down terminal overlay ────────────────────────────────────── */
+.title-box-clickable { padding: 2px 8px; border-radius: 8px; }
+.title-box-clickable:hover {
+  background: alpha(@godsapp_olympus, 0.16);
+  box-shadow: inset 0 0 0 1px alpha(@godsapp_olympus, 0.32);
+}
+
+.terminal-overlay {
+  margin: 0;
+  background: transparent;
+}
+.terminal-overlay-body {
+  background: linear-gradient(180deg,
+    rgba(6, 9, 18, 0.96)   0%,
+    rgba(8, 12, 24, 0.94)  35%,
+    rgba(4, 6, 14, 0.92)  100%);
+  border-bottom: 2px solid alpha(@godsapp_olympus, 0.85);
+  box-shadow:
+    0 24px 64px rgba(0,0,0,0.65),
+    0 0 120px alpha(@godsapp_olympus, 0.35) inset,
+    0 0 0 1px alpha(@godsapp_cloud_high, 0.08) inset;
+}
+.terminal-screen {
+  background: transparent;
+  margin: 0 14px 14px 14px;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px alpha(@godsapp_olympus, 0.35),
+              0 0 24px alpha(@godsapp_olympus, 0.18) inset;
+}
+.terminal-ascii {
+  font-family: "JetBrains Mono", "Fira Code", "Cascadia Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: @godsapp_cloud_high;
+  text-shadow: 0 0 6px alpha(@godsapp_olympus, 0.75),
+               0 0 14px alpha(@godsapp_olympus, 0.45);
+  letter-spacing: 0.04em;
+}
+.terminal-status-line {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: #dfe7f5;
+  padding: 2px 0;
+  border-top: 1px dashed alpha(@godsapp_olympus, 0.35);
+  border-bottom: 1px dashed alpha(@godsapp_olympus, 0.35);
+}
+.ascii-bolt {
+  font-size: 22px;
+  color: @godsapp_olympus;
+  text-shadow: 0 0 8px alpha(@godsapp_olympus, 0.95),
+               0 0 18px alpha(@godsapp_olympus, 0.65),
+               0 0 32px alpha(@godsapp_cloud_high, 0.35);
+  animation: bolt-pulse 1.4s ease-in-out infinite;
+}
+.ascii-bolt-right { animation-delay: 0.45s; }
+@keyframes bolt-pulse {
+  0%, 100% { opacity: 0.55; text-shadow: 0 0 4px alpha(@godsapp_olympus, 0.7); }
+  50%      { opacity: 1.00; text-shadow: 0 0 14px alpha(@godsapp_olympus, 1.0),
+                                         0 0 28px alpha(@godsapp_cloud_high, 0.7); }
+}
+
+/* WOW entry effect: fast rainbow-border pulse around the whole window */
+.godsapp-window.screen-pulse {
+  animation: screen-pulse-anim 1.55s ease-out 1;
+}
+@keyframes screen-pulse-anim {
+  0%   { box-shadow: inset 0 0 0 0   alpha(@godsapp_cloud_high, 0.0); }
+  10%  { box-shadow: inset 0 0 80px 8px alpha(@godsapp_cloud_high, 0.85),
+                     inset 0 0 0 4px alpha(@godsapp_olympus, 0.95); }
+  25%  { box-shadow: inset 0 0 40px 4px alpha(@godsapp_olympus, 0.55),
+                     inset 0 0 0 3px alpha(@godsapp_cloud_high, 0.65); }
+  45%  { box-shadow: inset 0 0 90px 10px alpha(@godsapp_cloud_high, 0.75),
+                     inset 0 0 0 5px alpha(@godsapp_olympus, 1.0); }
+  70%  { box-shadow: inset 0 0 30px 3px alpha(@godsapp_olympus, 0.45),
+                     inset 0 0 0 2px alpha(@godsapp_cloud_high, 0.40); }
+  100% { box-shadow: inset 0 0 0 0   alpha(@godsapp_cloud_high, 0.0); }
+}

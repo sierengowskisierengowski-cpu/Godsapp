@@ -20,6 +20,7 @@ from godsapp.tools import registry
 from godsapp.ui.command_palette import CommandPalette, build_commands
 from godsapp.ui.sidebar import Sidebar
 from godsapp.ui.storm import LightningOverlay
+from godsapp.ui.terminal_overlay import TerminalOverlay
 from godsapp.ui.views.api_console import ApiConsoleView
 from godsapp.ui.views.dashboard import DashboardView
 from godsapp.ui.views.evidence import EvidenceView
@@ -30,7 +31,6 @@ from godsapp.ui.views.reports import ReportsView
 from godsapp.ui.views.scan_view import ScanView
 from godsapp.ui.views.scheduler import SchedulerView
 from godsapp.ui.views.settings import SettingsView
-from godsapp.ui.views.terminal import TerminalView
 from godsapp.ui.views.workspaces import WorkspacesView
 
 
@@ -63,7 +63,6 @@ PINNED_ITEMS: list[tuple[str, str, str]] = [
     ("replay",     "Replay Engine",   "media-playback-start-symbolic"),
     ("plugins",    "Plugins",         "application-x-addon-symbolic"),
     ("api",        "API Console",     "network-server-symbolic"),
-    ("terminal",   "Terminal",        "utilities-terminal-symbolic"),
     ("settings",   "Settings",        "preferences-system-symbolic"),
 ]
 
@@ -128,7 +127,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._replay_view = ReplayView(self)
         self._plugins_view = PluginsView(self)
         self._api_view = ApiConsoleView(self)
-        self._terminal_view = TerminalView(self)
         self._settings_view = SettingsView(self)
 
         self._stack.add_named(self._dashboard,       "dashboard")
@@ -140,7 +138,6 @@ class MainWindow(Adw.ApplicationWindow):
         self._stack.add_named(self._replay_view,     "replay")
         self._stack.add_named(self._plugins_view,    "plugins")
         self._stack.add_named(self._api_view,        "api")
-        self._stack.add_named(self._terminal_view,   "terminal")
         self._stack.add_named(self._settings_view,   "settings")
 
         self._scan_views: dict[str, ScanView] = {}
@@ -163,11 +160,14 @@ class MainWindow(Adw.ApplicationWindow):
         toolbar_view.add_top_bar(header)
         toolbar_view.set_content(body)
 
-        # Live background lightning storm — transparent click-through Cairo
-        # overlay painting random bolts + brief flash veils across the entire
-        # window. The baked-CSS sky stays intact; the storm paints ON TOP.
+        # Live background lightning storm + slide-down terminal overlay.
+        # The storm is a transparent click-through Cairo layer; the
+        # terminal is a Gtk.Revealer that drops down from the top when
+        # the user double-clicks the GodsApp title in the header bar.
         root_overlay = Gtk.Overlay()
         root_overlay.set_child(toolbar_view)
+        self._terminal_overlay = TerminalOverlay(self)
+        root_overlay.add_overlay(self._terminal_overlay)
         self._storm = LightningOverlay()
         root_overlay.add_overlay(self._storm)
         self.set_content(root_overlay)
@@ -240,6 +240,19 @@ class MainWindow(Adw.ApplicationWindow):
     def _build_title(self) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         box.add_css_class("title-box")
+        box.add_css_class("title-box-clickable")
+        box.set_tooltip_text("Double-click to summon the terminal")
+        # Double-click anywhere on the title → toggle terminal overlay
+        click = Gtk.GestureClick.new()
+        click.set_button(1)
+        def _on_click(gesture, n_press, x, y):
+            if n_press == 2:
+                try:
+                    self._terminal_overlay.toggle()
+                except Exception:
+                    log.exception("terminal toggle failed")
+        click.connect("pressed", _on_click)
+        box.add_controller(click)
         try:
             from importlib.resources import files
             svg_path = files("godsapp.resources.icons").joinpath("godsapp-logo.svg")

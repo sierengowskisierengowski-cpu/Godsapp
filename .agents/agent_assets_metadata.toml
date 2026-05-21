@@ -96,3 +96,15 @@ id = "VCaVvUEEq6--qAEKB5r2J"
 uri = "file://godsapp-v0.3.7.zip"
 type = "unspecified"
 title = "GodsApp v0.3.7 (zip)"
+
+[[outputs]]
+id = "s41p6Kni4zX5s0rNLurP5"
+uri = "file://godsapp-v0.3.8.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.3.8 — slide-down terminal (tar.gz)"
+
+[[outputs]]
+id = "lFHkRmkde0L_tFhsVDzYV"
+uri = "file://godsapp-v0.3.8.zip"
+type = "unspecified"
+title = "GodsApp v0.3.8 — slide-down terminal (zip)"

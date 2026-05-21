@@ -188,6 +188,33 @@ class LightningOverlay(Gtk.DrawingArea):
             return
         self._spawn_strike(time.monotonic())
 
+    def intense_burst(self, count: int = 6, with_boom: bool = True) -> None:
+        """Rapid-fire storm — used as the terminal-open WOW effect.
+
+        Ignores the user's `background_storm` toggle because this is a
+        direct response to a user-initiated action (opening the terminal).
+        """
+        alloc = self.get_allocation()
+        w, h = max(800, alloc.width), max(600, alloc.height)
+        now = time.monotonic()
+        for k in range(count):
+            main, branches = _build_bolt(w, h, self._rng)
+            self._strikes.append(_Strike(
+                born=now + k*0.07,
+                duration=self._rng.uniform(0.40, 0.70),
+                main=main, branches=branches,
+                intensity=self._rng.uniform(0.85, 1.0),
+            ))
+            # Each strike gets its own flash veil for the rapid-fire effect
+            self._flashes.append((now + k*0.07, 0.30, self._rng.uniform(0.55, 0.85)))
+        # Closing white wash
+        self._flashes.append((now + count*0.07, 0.55, 0.95))
+        try:
+            play_async("thunder.wav" if with_boom else "thunder_distant.wav")
+        except Exception:
+            pass
+        self._ensure_frame_tick()
+
     # ── drawing ──────────────────────────────────────────────────────────
     def _draw(self, _area, cr, width, height, _user):
         if not (self._strikes or self._flashes):

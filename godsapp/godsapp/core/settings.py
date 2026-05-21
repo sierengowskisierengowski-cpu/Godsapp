@@ -68,7 +68,12 @@ class ReportsSettings(BaseModel):
 class TerminalSettings(BaseModel):
     shell: str = ""           # blank → $SHELL or /bin/bash
     font: str = "Monospace 11"
-    scrollback_lines: int = 10000
+    scrollback_lines: int = 50000
+    color_scheme: str = "godsapp"   # godsapp | dracula | solarized | nord | gruvbox
+    cursor_blink: bool = True
+    show_ascii_header: bool = True
+    show_status_line: bool = True
+    workspace_logging: bool = True
 
 
 class SchedulerSettings(BaseModel):

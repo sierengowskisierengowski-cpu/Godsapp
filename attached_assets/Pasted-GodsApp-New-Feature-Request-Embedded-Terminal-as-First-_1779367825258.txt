@@ -1,0 +1,108 @@
+GodsApp — New Feature Request: Embedded Terminal as First-Class App Mode
+I want to add a fully integrated embedded terminal experience inside GodsApp. Not a side panel, not a small pane — a real top-level terminal mode that takes over the workspace area when invoked. Here's the full spec for it.
+Invocation
+In the GodsApp top bar (title bar area), add a Terminal button (icon should be an animated lightning-bolt + console glyph, matching the GodsApp visual identity).
+When clicked, the terminal slides down from the top of the application window with a smooth animation (300–400ms) and takes over the entire workspace area below the top bar. The left sidebar stays visible but goes dim/inactive. The top bar stays pinned and visible at all times.
+A matching button (or the same Terminal button, now in "minimize" state) returns the terminal back UP and out of view with the same smooth animation, restoring the previous view exactly as it was.
+Persistence Across Visibility
+This is critical: the terminal session is persistent.
+
+Hiding the terminal does NOT kill the session
+Anything running in the terminal (long-running scans, tail commands, scripts, processes, ssh sessions, etc.) continues running in the background
+Bringing the terminal back down restores the same session with full scrollback intact, same working directory, same active processes, same environment
+The terminal session is tied to the GodsApp session — only ends if the user explicitly types exit or closes the GodsApp application entirely
+
+The terminal can also support multiple tabs (like a real terminal emulator — gnome-terminal, alacritty, kitty style) so users can run multiple parallel sessions.
+Visual Treatment
+When the terminal is active and taking over the workspace:
+
+Background: Blurred view of the app content behind it. Frosted glass effect — the user can see the underlying view shapes (workspace data, panels, lists, etc.) but it's clearly blurred enough that text in the terminal remains crisp, readable, and the primary focal point. Backdrop blur radius around 20–30px depending on what reads best.
+Terminal text: Crisp, sharp, high contrast against the blur. Default monospace font (JetBrains Mono Nerd Font or similar). User can change via Terminal Settings.
+Terminal header at the top of the terminal pane:
+
+Large ASCII-art "GODSAPP" rendered in big block letters
+Lightning bolt characters on each side of the GODSAPP text — mix of big and small bolts (e.g. ⚡⚡ GODSAPP ⚡⚡ style with multiple bolt sizes)
+The lightning bolts pulsate matching the GodsApp logo pulse rhythm (same effect as the app logo)
+Below the ASCII art, a single status line showing:
+
+Current date and time (live, updates every second)
+System hostname / user
+Running system stats (CPU %, RAM used, network bytes in/out — small inline stats)
+Live alert indicators — small colored dot per active alert source (red = critical, amber = warning, blue = info)
+
+Active scans count
+Active findings of severity Critical / High (count badges)
+If Meli is detected and connected: live event count from Meli (auto-updating)
+Scheduled scans pending / running
+Plugin runtime errors if any
+
+
+These indicators should be clickable — clicking opens a popover with details OR jumps to the relevant view (without closing the terminal — terminal stays visible)
+
+
+
+
+The ASCII header + status line stay PINNED at the top of the terminal area, always visible even when scrolling through terminal output. Below them is the actual VTE terminal output area which scrolls independently.
+
+Terminal Capabilities
+
+Real shell underneath — full bash/zsh/fish support based on user's default shell ($SHELL env var)
+Standard VTE features: keyboard shortcuts (Ctrl+C, Ctrl+L, etc.), copy/paste, mouse selection, link detection (clickable URLs), color codes (256-color + 24-bit), curses programs (htop, nano, vim, etc.) all work
+Working directory inheritance — terminal opens in the active workspace's evidence/notes directory by default; if no workspace is active, opens in the user's home directory
+Environment awareness — GodsApp injects context variables on terminal launch:
+
+$GODSAPP_WORKSPACE (UUID of active workspace)
+$GODSAPP_WORKSPACE_NAME
+$GODSAPP_EVIDENCE_DIR (path to active workspace evidence folder)
+$GODSAPP_FINDINGS_API (URL for findings API if enabled)
+
+
+Tab support — users can open additional terminal tabs within the same persistent session (Ctrl+Shift+T or a + icon)
+Each tab has its own scrollback (50,000 lines default, configurable)
+Search within scrollback (Ctrl+F)
+Right-click context menu with copy/paste/search/clear/new tab options
+
+Workspace-Aware Logging
+Every command run in the terminal automatically gets archived to the active workspace's terminal history file at ~/.local/share/godsapp/workspaces/<workspace_uuid>/terminal/<session_uuid>.log so users can review what they did in past engagements. The log file rotates daily and is auto-cleaned per the user's data retention policy.
+Settings
+A dedicated Terminal Settings sub-page in Settings should include:
+
+Default shell (auto-detect or pick from list)
+Font family + size
+Color scheme (presets: Solarized Dark, Dracula, Nord, Gruvbox, GodsApp Cream — and custom)
+Cursor style (block, beam, underline) + blink toggle
+Scrollback buffer size
+Auto-scroll on output toggle
+Sound on bell toggle
+Logging enabled toggle + retention days
+Status line items to show (checkboxes per metric)
+ASCII header style (Big Block, Slant, Doom, etc. — figlet-style)
+Pulse rhythm speed for the lightning bolts
+Blur intensity behind terminal (0–50px slider)
+
+Implementation Notes
+Build using:
+
+VTE3 (via gi.repository.Vte) — the same terminal widget used by gnome-terminal, tilix, and other professional Linux terminals. Already bundled with most distros, lightweight, full-featured.
+GTK4 + libadwaita for the overlay container, animations, blur backdrop
+psutil for the system stats in the header
+Subscribe to GodsApp's internal event bus for the alert indicators so they update live
+
+Animation Details
+
+Slide-down/slide-up uses an ease-in-out cubic curve over 350ms
+During slide-in, the lightning bolts in the ASCII header should "strike" once (a quick brighter pulse) then settle into their normal pulse rhythm
+The blur fade-in/out matches the slide animation so it's not jarring
+
+Acceptance Criteria
+
+Click Terminal button → terminal slides down smoothly, ASCII header pulses, real shell prompt appears, cursor focused in terminal automatically
+Type a command (e.g. ls, htop, top, tail -f /some/log) → it runs correctly
+Click Terminal button again → terminal slides UP, view restores
+Click Terminal button again → terminal slides DOWN, same session is there, scrollback preserved, any background processes still running
+Long-running command (e.g. tail -f cowrie.json) keeps streaming while terminal hidden
+Status indicators in the header update live without needing to interact
+Alert indicator clicks navigate to relevant views WITHOUT closing the terminal
+All Terminal Settings actually work and persist
+ASCII header pulsates correctly
+Blur backdrop reads cleanly — terminal text stays crisp
