@@ -10,6 +10,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from godsapp import __app_name__
 from godsapp.core.health import check_health
+from godsapp.core.scans import runner
 from godsapp.tools import registry
 from godsapp.ui.sidebar import Sidebar
 from godsapp.ui.views.dashboard import DashboardView
@@ -36,11 +37,15 @@ CATEGORY_LABELS: list[tuple[str, str, str]] = [
 ]
 
 
+_STATE_CLASSES = ("state-idle", "state-running", "state-ok", "state-err")
+
+
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application) -> None:
         super().__init__(application=app, title=__app_name__)
         self.set_default_size(1280, 800)
         self.add_css_class("godsapp-window")
+        self._set_state("idle")
 
         # Header bar
         header = Adw.HeaderBar()
@@ -61,22 +66,26 @@ class MainWindow(Adw.ApplicationWindow):
 
         # Sidebar
         self._sidebar = Sidebar(self._on_select)
-        self._sidebar.set_size_request(240, -1)
+        self._sidebar.set_size_request(260, -1)
 
         for cat_id, title, icon in CATEGORY_LABELS:
             tools_in_cat = registry.by_category().get(cat_id, [])
             self._sidebar.add_section(cat_id, title, icon, tools_in_cat)
 
-        self._sidebar.add_pinned("workspaces", "Workspaces", "folder-symbolic")
+        self._sidebar.add_pinned("dashboard",  "Dashboard",       "view-dashboard-symbolic")
+        self._sidebar.add_pinned("workspaces", "Workspaces",      "folder-symbolic")
         self._sidebar.add_pinned("evidence",   "Evidence Locker", "drive-multidisk-symbolic")
-        self._sidebar.add_pinned("settings",   "Settings", "preferences-system-symbolic")
+        self._sidebar.add_pinned("settings",   "Settings",        "preferences-system-symbolic")
 
-        # Content stack
+        # Content stack wrapped in a toast overlay so views can surface toasts
         self._stack = Gtk.Stack()
         self._stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self._stack.set_transition_duration(140)
         self._stack.set_hexpand(True)
         self._stack.set_vexpand(True)
+
+        self._toast_overlay = Adw.ToastOverlay()
+        self._toast_overlay.set_child(self._stack)
 
         self._dashboard = DashboardView(self)
         self._workspaces = WorkspacesView(self)
@@ -92,7 +101,7 @@ class MainWindow(Adw.ApplicationWindow):
         # Split
         split = Adw.NavigationSplitView()
         sidebar_page = Adw.NavigationPage(title="Tools", child=self._sidebar)
-        content_page = Adw.NavigationPage(title=__app_name__, child=self._stack)
+        content_page = Adw.NavigationPage(title=__app_name__, child=self._toast_overlay)
         split.set_sidebar(sidebar_page)
         split.set_content(content_page)
 
@@ -105,20 +114,71 @@ class MainWindow(Adw.ApplicationWindow):
         self._refresh_health()
         GLib.timeout_add_seconds(15, self._refresh_health)
 
+        # Subscribe to scan runner so the window border reflects scan state
+        self._scan_unsub = runner.subscribe(self._on_scan_event)
+        self.connect("close-request", self._on_close)
+
+    # ── public helpers ────────────────────────────────────────────────────
+    def show_toast(self, message: str) -> None:
+        try:
+            self._toast_overlay.add_toast(Adw.Toast(title=message))
+        except Exception:
+            pass
+
+    # ── internals ─────────────────────────────────────────────────────────
     def _build_title(self) -> Gtk.Widget:
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         box.add_css_class("title-box")
         bolt = Gtk.Label(label="⚡")
         bolt.add_css_class("title-bolt")
-        title = Gtk.Label(label=__app_name__)
+        bolt.add_css_class("bolt-logo")
+        title = Gtk.Label(label=__app_name__.upper())
         title.add_css_class("title-main")
         box.append(bolt)
         box.append(title)
         return box
 
+    def _set_state(self, state: str) -> None:
+        cls = f"state-{state}"
+        for s in _STATE_CLASSES:
+            if s != cls:
+                self.remove_css_class(s)
+        self.add_css_class(cls)
+
+    def _on_scan_event(self, _scan_id: str, kind: str, text: str) -> None:
+        def apply() -> bool:
+            if kind == "status":
+                t = (text or "").lower()
+                if "start" in t or "running" in t:
+                    self._set_state("running")
+                elif "complete" in t or "ok" in t or "success" in t or "exit 0" in t:
+                    self._set_state("ok")
+                elif "fail" in t or "error" in t:
+                    self._set_state("err")
+            elif kind in ("stdout", "stderr"):
+                # any live output means a scan is in flight
+                if "state-running" not in self.get_css_classes():
+                    self._set_state("running")
+            return False
+        GLib.idle_add(apply)
+
+    def _on_close(self, *_a) -> bool:
+        try:
+            self._scan_unsub()
+        except Exception:
+            pass
+        return False
+
     def _on_select(self, kind: str, payload: str) -> None:
         if kind == "pinned":
             self._stack.set_visible_child_name(payload)
+            # Refresh dynamic views on entry so users see live state.
+            if payload == "workspaces":
+                self._workspaces.refresh()
+            elif payload == "evidence":
+                self._evidence.refresh()
+            elif payload == "dashboard":
+                self._dashboard.refresh()
             return
         if kind == "tool":
             name = payload
@@ -126,6 +186,7 @@ class MainWindow(Adw.ApplicationWindow):
             if view is None:
                 tool = registry.get(name)
                 if tool is None:
+                    self.show_toast(f"Tool '{name}' is not registered.")
                     return
                 view = ScanView(self, tool)
                 self._scan_views[name] = view

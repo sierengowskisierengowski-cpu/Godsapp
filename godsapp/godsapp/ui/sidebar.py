@@ -10,6 +10,8 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Gtk  # noqa: E402
 
+from godsapp.ui.matrix import attach as attach_scramble
+
 SelectCallback = Callable[[str, str], None]  # (kind, payload)
 
 
@@ -47,6 +49,7 @@ class Sidebar(Gtk.Box):
         img = Gtk.Image.new_from_icon_name(icon)
         lbl = Gtk.Label(label=title, xalign=0)
         lbl.set_hexpand(True)
+        attach_scramble(lbl)
         box.append(img); box.append(lbl)
         row.set_child(box)
         row._meta = ("pinned", key)  # type: ignore[attr-defined]
@@ -65,6 +68,7 @@ class Sidebar(Gtk.Box):
         lbl = Gtk.Label(label=title.upper(), xalign=0)
         lbl.add_css_class("category-label")
         lbl.set_hexpand(True)
+        attach_scramble(lbl)
         count_lbl = Gtk.Label(label=str(count))
         count_lbl.add_css_class("category-count")
         box.append(img); box.append(lbl); box.append(count_lbl)

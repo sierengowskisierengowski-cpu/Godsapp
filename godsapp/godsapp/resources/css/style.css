@@ -1,113 +1,233 @@
-/* GodsApp styling — warm cream/ivory palette on dark base */
+/* GodsApp — warm off-white / cream on translucent dark base.
+ *
+ * Palette is intentionally tuned: foregrounds in the cream/ivory range,
+ * backgrounds in deep brown-black, and every surface uses alpha() so a
+ * blur-capable compositor (KWin, COSMIC, Mutter with blur ext) can
+ * frost the panels. Hard surfaces still render correctly without blur.
+ */
 
-@define-color godsapp_cream     #d4b87a;
-@define-color godsapp_ivory     #ebd7af;
-@define-color godsapp_bg_dark   #15110d;
-@define-color godsapp_panel     #1d1812;
-@define-color godsapp_panel_alt #251d15;
-@define-color godsapp_border    #3a2f22;
-@define-color godsapp_muted     #a89272;
+/* ──────────────  palette  ────────────── */
+@define-color godsapp_cream_high  #fdfaf2; /* primary headings / glow */
+@define-color godsapp_cream       #f0e0bc; /* body cream */
+@define-color godsapp_ivory       #ebd7af; /* secondary headings */
+@define-color godsapp_butter      #d4b87a; /* accent / icons */
+@define-color godsapp_muted       #c3ad84; /* muted cream (was gray) */
+@define-color godsapp_bg_deep     #0e0a07; /* deepest base */
+@define-color godsapp_bg_dark     #15110d; /* window base */
+@define-color godsapp_panel       #1d1812; /* card surface */
+@define-color godsapp_panel_alt   #251d15;
+@define-color godsapp_border      #4a3a28;
+
+@define-color godsapp_state_idle    #c3ad84;
+@define-color godsapp_state_running #4ca7e0;
+@define-color godsapp_state_ok      #6abf6a;
+@define-color godsapp_state_err     #d65a5a;
+
 @define-color godsapp_critical  #d65a5a;
 @define-color godsapp_high      #d68a3c;
 @define-color godsapp_warning   #d6c43c;
 @define-color godsapp_success   #6abf6a;
 
-.godsapp-window {
-  background-color: @godsapp_bg_dark;
+/* ──────────────  animations  ────────────── */
+@keyframes bolt-glow {
+  0%   { color: @godsapp_cream;     text-shadow: 0 0 4px alpha(@godsapp_butter, 0.55), 0 0 10px alpha(@godsapp_butter, 0.35); }
+  50%  { color: @godsapp_cream_high;text-shadow: 0 0 10px alpha(@godsapp_cream_high, 0.95), 0 0 22px alpha(@godsapp_butter, 0.75), 0 0 32px alpha(@godsapp_butter, 0.45); }
+  100% { color: @godsapp_cream;     text-shadow: 0 0 4px alpha(@godsapp_butter, 0.55), 0 0 10px alpha(@godsapp_butter, 0.35); }
 }
 
-.title-box .title-bolt {
+@keyframes border-pulse-idle {
+  0%,100% { border-color: alpha(@godsapp_state_idle, 0.35); }
+  50%     { border-color: alpha(@godsapp_state_idle, 0.85); }
+}
+@keyframes border-pulse-running {
+  0%,100% { border-color: alpha(@godsapp_state_running, 0.45); box-shadow: inset 0 0 0 1px alpha(@godsapp_state_running, 0.20); }
+  50%     { border-color: alpha(@godsapp_state_running, 1.00); box-shadow: inset 0 0 0 1px alpha(@godsapp_state_running, 0.55); }
+}
+@keyframes border-pulse-ok {
+  0%,100% { border-color: alpha(@godsapp_state_ok, 0.40); }
+  50%     { border-color: alpha(@godsapp_state_ok, 0.95); }
+}
+@keyframes border-pulse-err {
+  0%,100% { border-color: alpha(@godsapp_state_err, 0.45); }
+  50%     { border-color: alpha(@godsapp_state_err, 1.00); }
+}
+
+@keyframes row-active-pulse {
+  0%,100% { background-color: alpha(@godsapp_butter, 0.12); border-color: alpha(@godsapp_butter, 0.55); }
+  50%     { background-color: alpha(@godsapp_butter, 0.22); border-color: alpha(@godsapp_cream_high, 0.95); }
+}
+
+/* ──────────────  window + translucency  ────────────── */
+window.godsapp-window,
+.godsapp-window {
+  background-color: alpha(@godsapp_bg_dark, 0.86);
   color: @godsapp_cream;
-  font-size: 16px;
-  font-weight: 700;
+  border: 1px solid alpha(@godsapp_butter, 0.35);
+  border-radius: 10px;
+}
+.godsapp-window.state-idle    { animation: border-pulse-idle    3.0s ease-in-out infinite; }
+.godsapp-window.state-running { animation: border-pulse-running 1.2s ease-in-out infinite; }
+.godsapp-window.state-ok      { animation: border-pulse-ok      1.6s ease-in-out infinite; }
+.godsapp-window.state-err     { animation: border-pulse-err     0.9s ease-in-out infinite; }
+
+headerbar, .titlebar {
+  background-color: alpha(@godsapp_bg_deep, 0.55);
+  color: @godsapp_cream;
+  border-bottom: 1px solid alpha(@godsapp_butter, 0.18);
+}
+
+/* ──────────────  title / bolt logo  ────────────── */
+.title-box { padding: 0 4px; }
+.title-box .title-bolt,
+.bolt-logo {
+  color: @godsapp_cream_high;
+  font-size: 18px;
+  font-weight: 800;
+  text-shadow: 0 0 8px alpha(@godsapp_butter, 0.75);
+  animation: bolt-glow 2.4s ease-in-out infinite;
 }
 .title-box .title-main {
-  color: @godsapp_ivory;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  color: @godsapp_cream_high;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: 13px;
 }
 
 .health-dot { font-size: 14px; padding: 0 8px; }
-.health-dot.ok    { color: @godsapp_success; }
-.health-dot.warn  { color: @godsapp_warning; }
-.health-dot.err   { color: @godsapp_critical; }
+.health-dot.ok    { color: @godsapp_success; text-shadow: 0 0 6px alpha(@godsapp_success, 0.6); }
+.health-dot.warn  { color: @godsapp_warning; text-shadow: 0 0 6px alpha(@godsapp_warning, 0.6); }
+.health-dot.err   { color: @godsapp_critical; text-shadow: 0 0 6px alpha(@godsapp_critical, 0.6); }
 
+/* ──────────────  sidebar  ────────────── */
 .sidebar-root,
 .navigation-sidebar {
-  background-color: @godsapp_panel;
+  background-color: alpha(@godsapp_panel, 0.72);
+  color: @godsapp_cream;
 }
+.navigation-sidebar > row { color: @godsapp_cream; }
+
+.category-header { padding: 0; }
 .category-header .category-label {
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: @godsapp_muted;
+  font-weight: 800;
+  letter-spacing: 0.20em;
+  color: @godsapp_ivory;
 }
 .category-header .category-count {
   font-size: 10px;
-  color: @godsapp_muted;
-  padding: 0 6px;
-  border: 1px solid @godsapp_border;
-  border-radius: 8px;
+  color: @godsapp_butter;
+  padding: 0 8px;
+  border: 1px solid alpha(@godsapp_butter, 0.5);
+  border-radius: 9px;
+  background-color: alpha(@godsapp_butter, 0.10);
 }
-.tool-row .tool-dot { color: @godsapp_cream; }
-.tool-row:hover { background-color: alpha(@godsapp_cream, 0.08); }
-.pinned-row { font-weight: 600; }
+.category-header .category-icon { color: @godsapp_butter; }
 
+.tool-row { color: @godsapp_cream; border: 1px solid transparent; border-radius: 6px; margin: 1px 6px; }
+.tool-row .tool-dot { color: @godsapp_butter; }
+.tool-row:hover {
+  background-color: alpha(@godsapp_butter, 0.10);
+  border-color: alpha(@godsapp_butter, 0.30);
+}
+.tool-row:selected,
+.navigation-sidebar > row:selected {
+  background-color: alpha(@godsapp_butter, 0.18);
+  color: @godsapp_cream_high;
+  border: 1px solid alpha(@godsapp_butter, 0.65);
+  animation: row-active-pulse 2.0s ease-in-out infinite;
+}
+.tool-row.state-running { animation: border-pulse-running 1.2s ease-in-out infinite; border-width: 1px; border-style: solid; }
+.tool-row.state-ok      { animation: border-pulse-ok      1.6s ease-in-out infinite; border-width: 1px; border-style: solid; }
+.tool-row.state-err     { animation: border-pulse-err     0.9s ease-in-out infinite; border-width: 1px; border-style: solid; }
+
+.pinned-row { font-weight: 600; color: @godsapp_cream_high; margin: 1px 6px; border-radius: 6px; }
+.pinned-row:hover { background-color: alpha(@godsapp_butter, 0.10); }
+.pinned-row:selected {
+  background-color: alpha(@godsapp_butter, 0.18);
+  border: 1px solid alpha(@godsapp_butter, 0.55);
+}
+
+/* ──────────────  views / cards  ────────────── */
 .dashboard-root,
 .view-title {
-  color: @godsapp_ivory;
+  color: @godsapp_cream_high;
 }
-.view-title { font-size: 20px; font-weight: 700; letter-spacing: 0.04em; }
-.hero-title { font-size: 26px; font-weight: 700; color: @godsapp_ivory; }
+.view-title { font-size: 22px; font-weight: 800; letter-spacing: 0.04em; }
+.hero-title { font-size: 28px; font-weight: 800; color: @godsapp_cream_high; text-shadow: 0 0 12px alpha(@godsapp_butter, 0.35); }
 .hero-sub   { color: @godsapp_muted; }
 
 .stat-tile {
-  background-color: @godsapp_panel;
-  border: 1px solid @godsapp_border;
-  border-radius: 10px;
-  padding: 12px 14px;
+  background-color: alpha(@godsapp_panel, 0.78);
+  border: 1px solid alpha(@godsapp_butter, 0.30);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: @godsapp_cream;
 }
-.stat-title { font-size: 10px; letter-spacing: 0.15em; color: @godsapp_muted; }
-.stat-value { font-size: 28px; font-weight: 700; color: @godsapp_cream; }
+.stat-tile:hover { border-color: alpha(@godsapp_butter, 0.65); }
+.stat-title { font-size: 10px; letter-spacing: 0.18em; color: @godsapp_ivory; font-weight: 700; }
+.stat-value { font-size: 32px; font-weight: 800; color: @godsapp_cream_high; }
 
 .card {
-  background-color: @godsapp_panel;
-  border: 1px solid @godsapp_border;
-  border-radius: 10px;
-  padding: 14px 16px;
+  background-color: alpha(@godsapp_panel, 0.78);
+  border: 1px solid alpha(@godsapp_butter, 0.28);
+  border-radius: 12px;
+  padding: 16px 18px;
+  color: @godsapp_cream;
 }
-.card-title { font-weight: 600; color: @godsapp_ivory; }
-.status-body { font-family: monospace; color: @godsapp_muted; }
+.card-title { font-weight: 700; color: @godsapp_cream_high; }
+.status-body { font-family: monospace; color: @godsapp_cream; }
 
+.boxed-list,
+list.boxed-list > row {
+  background-color: alpha(@godsapp_panel, 0.70);
+  color: @godsapp_cream;
+}
+
+.output-pane,
 .output-pane text {
-  background-color: @godsapp_bg_dark;
-  color: @godsapp_ivory;
-  font-family: "JetBrains Mono", monospace;
+  background-color: alpha(@godsapp_bg_deep, 0.92);
+  color: @godsapp_cream;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
   padding: 8px;
+  border: 1px solid alpha(@godsapp_butter, 0.25);
+  border-radius: 8px;
 }
 
 .section-title {
   font-size: 11px;
-  letter-spacing: 0.15em;
-  color: @godsapp_muted;
-  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: @godsapp_ivory;
+  font-weight: 800;
 }
 
 .finding-row {
-  background-color: @godsapp_panel_alt;
+  background-color: alpha(@godsapp_panel_alt, 0.85);
+  border: 1px solid alpha(@godsapp_butter, 0.22);
   border-radius: 8px;
   padding: 6px 10px;
   margin: 2px 0;
+  color: @godsapp_cream;
 }
 .severity-badge {
   padding: 1px 8px;
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-weight: 800;
+  letter-spacing: 0.10em;
   border-radius: 4px;
 }
-.sev-info     { background: alpha(@godsapp_muted, 0.20); color: @godsapp_muted; }
-.sev-low      { background: alpha(@godsapp_cream, 0.22); color: @godsapp_cream; }
-.sev-medium   { background: alpha(@godsapp_warning, 0.22); color: @godsapp_warning; }
-.sev-high     { background: alpha(@godsapp_high, 0.24); color: @godsapp_high; }
-.sev-critical { background: alpha(@godsapp_critical, 0.26); color: @godsapp_critical; }
+.sev-info     { background: alpha(@godsapp_muted, 0.22);    color: @godsapp_cream_high; }
+.sev-low      { background: alpha(@godsapp_butter, 0.24);   color: @godsapp_cream_high; }
+.sev-medium   { background: alpha(@godsapp_warning, 0.26);  color: @godsapp_warning; }
+.sev-high     { background: alpha(@godsapp_high, 0.28);     color: @godsapp_high; }
+.sev-critical { background: alpha(@godsapp_critical, 0.30); color: @godsapp_critical; }
+
+button.suggested-action {
+  background-color: alpha(@godsapp_butter, 0.22);
+  color: @godsapp_cream_high;
+  border: 1px solid alpha(@godsapp_butter, 0.65);
+  border-radius: 8px;
+}
+button.suggested-action:hover {
+  background-color: alpha(@godsapp_butter, 0.34);
+  border-color: @godsapp_cream_high;
+}
