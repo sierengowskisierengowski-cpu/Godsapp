@@ -51,10 +51,11 @@
 }
 
 @keyframes aurora-drift {
-  0%   { background-position:  0%  0%, 100%   0%,  50% 100%,  50%  50%; }
-  33%  { background-position: 25% 15%,  75%  30%,  60%  75%,  45%  55%; }
-  66%  { background-position: 50%  5%,  50%  20%,  40%  85%,  55%  45%; }
-  100% { background-position:  0%  0%, 100%   0%,  50% 100%,  50%  50%; }
+  /* 9 layers: 6 cloud puffs, 2 sunshafts, 1 base sky. Only the cloud puffs
+   * drift; the sunshafts and the base sky stay fixed. */
+  0%   { background-position:  0%   0%, 25%   0%, 50% 10%, 75% 30%, 30% 70%, 60% 80%, 88%  8%, 10% 98%, 0% 0%; }
+  50%  { background-position:  8%   5%, 33%   3%, 58% 14%, 82% 34%, 22% 74%, 52% 84%, 88%  8%, 10% 98%, 0% 0%; }
+  100% { background-position:  0%   0%, 25%   0%, 50% 10%, 75% 30%, 30% 70%, 60% 80%, 88%  8%, 10% 98%, 0% 0%; }
 }
 
 @keyframes border-pulse-idle    { 0%,100%{border-color:alpha(@godsapp_sky,.45);} 50%{border-color:alpha(@godsapp_sky,.90);} }
@@ -67,20 +68,33 @@
   50%     { background-color: alpha(@godsapp_sky,.22);  border-color: alpha(@godsapp_cloud_high,.95); }
 }
 
-/* ──────────────  window + cloud aurora  ────────────── */
+/* ──────────────  window + cloud aurora  ──────────────
+ * Background is OPAQUE so it renders the same with or without a blurring
+ * compositor. A vertical sky gradient + 6 white cloud puffs + 2 golden
+ * sunshafts are baked directly into the window. Cards/sidebar use alpha()
+ * so the bright sky bleeds through — that's what gives the "floating
+ * panels above the clouds" depth without needing KWin/Mutter blur.
+ */
 window.godsapp-window, .godsapp-window {
-  background-color: alpha(@godsapp_bg_dark,.78);
-  /* layered radial gradients = drifting clouds + divine sky */
+  background-color: #1a2c4c;
   background-image:
-    radial-gradient(at  18% 12%, alpha(@godsapp_cloud_high,.18) 0%, transparent 45%),
-    radial-gradient(at  82% 22%, alpha(@godsapp_aurora_c,.55)  0%, transparent 60%),
-    radial-gradient(at  45% 90%, alpha(@godsapp_aurora_a,.55)  0%, transparent 65%),
-    radial-gradient(at  90% 80%, alpha(@godsapp_olympus_lo,.16) 0%, transparent 55%);
-  background-size: 180% 180%, 180% 180%, 200% 200%, 200% 200%;
+    /* white cloud puffs */
+    radial-gradient(ellipse  300px  140px at  12%  18%, rgba(255,255,255,.55) 0%, rgba(255,255,255,.20) 35%, transparent 65%),
+    radial-gradient(ellipse  220px  100px at  38%   8%, rgba(255,255,255,.45) 0%, rgba(255,255,255,.15) 40%, transparent 70%),
+    radial-gradient(ellipse  360px  150px at  72%  22%, rgba(255,255,255,.50) 0%, rgba(255,255,255,.18) 35%, transparent 65%),
+    radial-gradient(ellipse  280px  120px at  92%  62%, rgba(255,255,255,.38) 0%, rgba(255,255,255,.12) 40%, transparent 70%),
+    radial-gradient(ellipse  340px  140px at  18%  78%, rgba(255,255,255,.40) 0%, rgba(255,255,255,.14) 38%, transparent 68%),
+    radial-gradient(ellipse  300px  130px at  60%  92%, rgba(255,255,255,.42) 0%, rgba(255,255,255,.14) 40%, transparent 70%),
+    /* golden sunshafts */
+    radial-gradient(circle    600px      at  88%   8%, rgba(240,210,122,.32) 0%, rgba(240,210,122,.10) 30%, transparent 60%),
+    radial-gradient(circle    500px      at  10%  98%, rgba(240,210,122,.20) 0%, transparent 55%),
+    /* base sky vertical gradient */
+    linear-gradient(180deg, #5e95c4 0%, #3a6aa0 35%, #233f6d 70%, #12203a 100%);
+  background-size: 180% 180%, 180% 180%, 180% 180%, 180% 180%, 180% 180%, 180% 180%, 180% 180%, 180% 180%, 100% 100%;
   background-repeat: no-repeat;
-  animation: aurora-drift 28s ease-in-out infinite;
+  animation: aurora-drift 32s ease-in-out infinite;
   color: @godsapp_cloud;
-  border: 1px solid alpha(@godsapp_cloud_high,.32);
+  border: 1px solid alpha(@godsapp_cloud_high,.40);
   border-radius: 14px;
 }
 .godsapp-window.state-idle    { animation: aurora-drift 28s ease-in-out infinite, border-pulse-idle    3.0s ease-in-out infinite; }
@@ -89,12 +103,12 @@ window.godsapp-window, .godsapp-window {
 .godsapp-window.state-err     { animation: aurora-drift 28s ease-in-out infinite, border-pulse-err     0.9s ease-in-out infinite; }
 
 headerbar, .titlebar {
-  background-color: alpha(@godsapp_bg_deep,.42);
+  background-color: alpha(@godsapp_bg_deep,.65);
   color: @godsapp_cloud_high;
-  border-bottom: 1px solid alpha(@godsapp_cloud_high,.16);
+  border-bottom: 1px solid alpha(@godsapp_cloud_high,.20);
   min-height: 46px;
   /* tiny gold seam at the very bottom = divine threshold */
-  box-shadow: inset 0 -2px 0 alpha(@godsapp_olympus,.22);
+  box-shadow: inset 0 -2px 0 alpha(@godsapp_olympus,.45);
 }
 
 /* ──────────────  title / bolt logo  ────────────── */
@@ -139,7 +153,7 @@ headerbar, .titlebar {
 
 /* ──────────────  sidebar (with fluted column edge) ────────────── */
 .sidebar-root, .navigation-sidebar {
-  background-color: alpha(@godsapp_panel,.55);
+  background-color: alpha(@godsapp_panel,.72);
   color: @godsapp_cloud;
   /* fluted column flourish along the right edge */
   box-shadow:
@@ -202,7 +216,7 @@ headerbar, .titlebar {
 .hero-sub   { color: @godsapp_muted; font-size: 12px; }
 
 .stat-tile {
-  background-color: alpha(@godsapp_panel,.55);
+  background-color: alpha(@godsapp_panel,.72);
   background-image:
     linear-gradient(180deg, alpha(@godsapp_cloud_high,.10) 0%, transparent 60%),
     linear-gradient(135deg, alpha(@godsapp_sky,.04)        0%, transparent 70%);
@@ -226,7 +240,7 @@ headerbar, .titlebar {
 .stat-delta.down { color: @godsapp_critical; }
 
 .card {
-  background-color: alpha(@godsapp_panel,.55);
+  background-color: alpha(@godsapp_panel,.72);
   background-image:
     linear-gradient(180deg, alpha(@godsapp_cloud_high,.07) 0%, transparent 50%);
   border: 1px solid alpha(@godsapp_cloud_high,.22);

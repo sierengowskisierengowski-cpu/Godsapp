@@ -176,6 +176,24 @@ class MainWindow(Adw.ApplicationWindow):
         key_ctrl.connect("key-pressed", self._on_key)
         self.add_controller(key_ctrl)
 
+        # Explicit window-scoped shortcut for Ctrl+K so the palette opens even
+        # when an entry/textview has focus (app accelerators don't always reach
+        # widgets that consume key events first).
+        try:
+            sc_ctrl = Gtk.ShortcutController()
+            sc_ctrl.set_scope(Gtk.ShortcutScope.GLOBAL)
+            sc_ctrl.add_shortcut(Gtk.Shortcut.new(
+                Gtk.ShortcutTrigger.parse_string("<Primary>k"),
+                Gtk.CallbackAction.new(lambda *_a: (self.open_command_palette(), True)[1]),
+            ))
+            sc_ctrl.add_shortcut(Gtk.Shortcut.new(
+                Gtk.ShortcutTrigger.parse_string("F5"),
+                Gtk.CallbackAction.new(lambda *_a: (self.refresh_current(), True)[1]),
+            ))
+            self.add_controller(sc_ctrl)
+        except Exception:
+            pass
+
     # ── public helpers ────────────────────────────────────────────────────
     def show_toast(self, message: str) -> None:
         try:

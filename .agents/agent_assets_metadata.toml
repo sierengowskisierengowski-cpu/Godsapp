@@ -24,3 +24,15 @@ id = "F4ajzMpCFQFDD4YENuwZa"
 uri = "file://godsapp-v0.3.1.zip"
 type = "unspecified"
 title = "GodsApp v0.3.1 — Olympus polish (zip)"
+
+[[outputs]]
+id = "pjUFJBzx9R9PNmwcC8B80"
+uri = "file://godsapp-v0.3.2.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.3.2 — baked sky + clouds (tarball)"
+
+[[outputs]]
+id = "kVDk9z1trKf4Gh7ta8RjV"
+uri = "file://godsapp-v0.3.2.zip"
+type = "unspecified"
+title = "GodsApp v0.3.2 — baked sky + clouds (zip)"
