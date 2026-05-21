@@ -4,29 +4,32 @@ Called by both the MQTT handler and HTTP ingest handler.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import threading
+import time
 import structlog
 from datetime import datetime, timezone
 
 log = structlog.get_logger()
 
-# Per-IP locks prevent a race where two simultaneous events from the
-# same brand-new attacker both try to INSERT the Attacker row and the
-# second one crashes on the UNIQUE constraint (losing that event).
-# A single global lock would serialise all ingest; per-IP keeps
-# unrelated traffic parallel.
-_attacker_locks: dict[str, threading.Lock] = {}
-_attacker_locks_guard = threading.Lock()
+# Striped per-IP locking: a fixed-size array of locks indexed by a hash
+# of the IP. Two simultaneous events from the same brand-new attacker
+# always hash to the same lock, so the second one waits and sees the
+# row the first one inserted (preventing the UNIQUE-constraint crash).
+# Unrelated IPs collide only ~1/N of the time, so ingest stays parallel.
+# Crucially, memory is bounded — earlier per-IP dict grew without limit
+# on internet-facing honeypots.
+_LOCK_STRIPES = 256
+_attacker_stripe_locks: tuple[threading.Lock, ...] = tuple(
+    threading.Lock() for _ in range(_LOCK_STRIPES)
+)
 
 
 def _lock_for_ip(ip: str) -> threading.Lock:
-    with _attacker_locks_guard:
-        lk = _attacker_locks.get(ip)
-        if lk is None:
-            lk = threading.Lock()
-            _attacker_locks[ip] = lk
-        return lk
+    # Hash so adjacent IPs distribute evenly across stripes.
+    h = int.from_bytes(hashlib.md5(ip.encode("utf-8", "replace")).digest()[:4], "big")
+    return _attacker_stripe_locks[h % _LOCK_STRIPES]
 
 
 def process_event(raw: dict, source: str = "mqtt") -> None:
@@ -55,52 +58,73 @@ def process_event(raw: dict, source: str = "mqtt") -> None:
         geo = geolocate_ip(ip)
         normalized["country_code"] = geo.get("country_code")
 
-        # Store event
-        with get_db() as db:
-            ev = Event(
-                timestamp=normalized.get("timestamp", datetime.now(timezone.utc)),
-                source_ip=normalized.get("source_ip", ""),
-                source_port=normalized.get("source_port"),
-                destination_port=normalized.get("destination_port"),
-                honeypot_service=normalized.get("honeypot_service", "unknown"),
-                protocol=normalized.get("protocol"),
-                transport=normalized.get("transport"),
-                severity=severity,
-                parsed_data=json.dumps(normalized),
-                session_id=normalized.get("session_id"),
-                country_code=normalized.get("country_code"),
-                username=normalized.get("username"),
-                command=normalized.get("command"),
-                payload_hash=normalized.get("payload_hash"),
-                classification_rules_matched=normalized["classification_rules_matched"],
-                enrichment_status="pending",
-            )
-            db.add(ev)
-            db.flush()
-            event_id = ev.id
+        # ── Atomic event + attacker write ─────────────────────────
+        # Hold the per-IP stripe lock around the WHOLE transaction so:
+        #   (a) the UNIQUE(Attacker.ip) race is closed (two threads on
+        #       the same brand-new IP can't both INSERT), and
+        #   (b) we never commit an event without the corresponding
+        #       attacker upsert (no aggregate drift even if the DB is
+        #       transiently locked).
+        # On SQLite, retry up to 3 times when the writer lock is held by
+        # someone else (WAL "database is locked" appears as OperationalError).
+        from sqlalchemy.exc import OperationalError
+        from meli.utils.helpers import severity_rank
+        event_id = None
+        attempts = 3
+        last_exc = None
+        for attempt in range(attempts):
+            try:
+                with _lock_for_ip(ip):
+                    with get_db() as db:
+                        ev = Event(
+                            timestamp=normalized.get("timestamp", datetime.now(timezone.utc)),
+                            source_ip=normalized.get("source_ip", ""),
+                            source_port=normalized.get("source_port"),
+                            destination_port=normalized.get("destination_port"),
+                            honeypot_service=normalized.get("honeypot_service", "unknown"),
+                            protocol=normalized.get("protocol"),
+                            transport=normalized.get("transport"),
+                            severity=severity,
+                            parsed_data=json.dumps(normalized),
+                            session_id=normalized.get("session_id"),
+                            country_code=normalized.get("country_code"),
+                            username=normalized.get("username"),
+                            command=normalized.get("command"),
+                            payload_hash=normalized.get("payload_hash"),
+                            classification_rules_matched=normalized["classification_rules_matched"],
+                            enrichment_status="pending",
+                        )
+                        db.add(ev)
+                        db.flush()
+                        event_id = ev.id
 
-        # Upsert attacker record (held outside the event-insert session so
-        # we don't keep that transaction open while waiting on the lock).
-        with _lock_for_ip(ip):
-            with get_db() as db:
-                attacker = db.get(Attacker, ip)
-                now = datetime.now(timezone.utc)
-                if attacker:
-                    attacker.last_seen = now
-                    attacker.total_events += 1
-                    from meli.utils.helpers import severity_rank
-                    if severity_rank(severity) > severity_rank(attacker.max_severity):
-                        attacker.max_severity = severity
-                else:
-                    attacker = Attacker(
-                        ip=ip,
-                        first_seen=now,
-                        last_seen=now,
-                        total_events=1,
-                        max_severity=severity,
-                        country_code=normalized.get("country_code"),
-                    )
-                    db.add(attacker)
+                        attacker = db.get(Attacker, ip)
+                        now = datetime.now(timezone.utc)
+                        if attacker:
+                            attacker.last_seen = now
+                            attacker.total_events += 1
+                            if severity_rank(severity) > severity_rank(attacker.max_severity):
+                                attacker.max_severity = severity
+                        else:
+                            db.add(Attacker(
+                                ip=ip,
+                                first_seen=now,
+                                last_seen=now,
+                                total_events=1,
+                                max_severity=severity,
+                                country_code=normalized.get("country_code"),
+                            ))
+                break  # success
+            except OperationalError as oe:
+                last_exc = oe
+                # SQLite lock contention — back off and retry.
+                time.sleep(0.05 * (attempt + 1))
+        else:
+            # All retries exhausted: log loudly and bail. Neither row
+            # was committed because each attempt was a single transaction.
+            log.error("Event+attacker write failed after retries",
+                      ip=ip, attempts=attempts, error=str(last_exc))
+            return
 
         # Fire alerts asynchronously
         threading.Thread(

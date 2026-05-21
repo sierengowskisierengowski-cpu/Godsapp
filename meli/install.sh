@@ -229,9 +229,45 @@ install_desktop() {
 install_services() {
     log "Phase 6: Installing systemd user services..."
 
-    local target_user="${SUDO_USER:-$USER}"
+    # Resolve target user. Order of precedence:
+    #   1. --target-user=NAME on the command line (TARGET_USER env)
+    #   2. $SUDO_USER (set by `sudo`)
+    #   3. $PKEXEC_UID resolved via getent (set by `pkexec`)
+    #   4. $USER, only if NOT root (i.e. running unprivileged install)
+    # If none of those yield a real non-root account, bail loudly —
+    # silently installing user units into root's home is worse than
+    # failing fast (the operator would later wonder why nothing ingests).
+    local target_user=""
+    if [ -n "${TARGET_USER:-}" ]; then
+        target_user="$TARGET_USER"
+    elif [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+        target_user="$SUDO_USER"
+    elif [ -n "${PKEXEC_UID:-}" ]; then
+        target_user="$(getent passwd "$PKEXEC_UID" | cut -d: -f1)"
+    elif [ "$(id -u)" != "0" ] && [ -n "${USER:-}" ] && [ "$USER" != "root" ]; then
+        target_user="$USER"
+    fi
+
+    if [ -z "$target_user" ] || [ "$target_user" = "root" ]; then
+        err "Cannot determine which user to install Meli's systemd units for."
+        err "When running as root directly (no sudo/pkexec), pass the target user explicitly:"
+        err "  sudo TARGET_USER=alice ./install.sh"
+        err "Or re-run via sudo as that user:"
+        err "  sudo -u alice ./install.sh   (won't work — needs privilege; use 'sudo' from alice's shell instead)"
+        exit 1
+    fi
+
+    if ! getent passwd "$target_user" >/dev/null; then
+        err "Target user '$target_user' does not exist on this system."
+        exit 1
+    fi
+
     local target_home
     target_home="$(getent passwd "$target_user" | cut -d: -f6)"
+    if [ -z "$target_home" ] || [ ! -d "$target_home" ]; then
+        err "Target user '$target_user' has no valid home directory."
+        exit 1
+    fi
     local target_systemd="$target_home/.config/systemd/user"
     local target_uid
     target_uid="$(id -u "$target_user")"
