@@ -223,24 +223,53 @@ install_desktop() {
 }
 
 # ── Phase 6: Systemd user services ───────────────────────────────────────────
+# Resolve the *invoking* user so that systemd --user calls target the right
+# DBUS session even when the installer was launched via `sudo`. If we are
+# already running as a normal user this collapses to ${USER}.
 install_services() {
     log "Phase 6: Installing systemd user services..."
-    mkdir -p "$SYSTEMD_USER"
+
+    local target_user="${SUDO_USER:-$USER}"
+    local target_home
+    target_home="$(getent passwd "$target_user" | cut -d: -f6)"
+    local target_systemd="$target_home/.config/systemd/user"
+    local target_uid
+    target_uid="$(id -u "$target_user")"
+
+    install -d -o "$target_user" -g "$target_user" -m 700 "$target_systemd"
 
     if [ -f "$APP_DIR/meli.service" ]; then
-        cp "$APP_DIR/meli.service" "$SYSTEMD_USER/meli.service"
+        install -o "$target_user" -g "$target_user" -m 644 \
+            "$APP_DIR/meli.service" "$target_systemd/meli.service"
     fi
     if [ -f "$APP_DIR/meli-ingest.service" ]; then
-        cp "$APP_DIR/meli-ingest.service" "$SYSTEMD_USER/meli-ingest.service"
+        install -o "$target_user" -g "$target_user" -m 644 \
+            "$APP_DIR/meli-ingest.service" "$target_systemd/meli-ingest.service"
     fi
 
-    systemctl --user daemon-reload 2>/dev/null || true
+    # Re-enter the target user's DBUS session before calling systemctl --user.
+    # When the script is run via sudo, this script's own systemctl --user
+    # would target root's session bus (which isn't usually running) and
+    # silently fail to enable the units.
+    run_as_user() {
+        if [ "$(id -un)" = "$target_user" ]; then
+            "$@"
+        else
+            sudo -u "$target_user" \
+                XDG_RUNTIME_DIR="/run/user/$target_uid" \
+                DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$target_uid/bus" \
+                "$@"
+        fi
+    }
 
-    # Enable and start ingest daemon (runs without display)
-    systemctl --user enable meli-ingest.service 2>/dev/null || warn "Could not enable meli-ingest.service (systemd user session may not be active yet)"
-    systemctl --user start meli-ingest.service 2>/dev/null || warn "Could not start meli-ingest.service — start it manually: systemctl --user start meli-ingest"
+    run_as_user systemctl --user daemon-reload 2>/dev/null || \
+        warn "systemctl --user daemon-reload failed — run it once logged in as $target_user."
+    run_as_user systemctl --user enable meli-ingest.service 2>/dev/null || \
+        warn "Could not enable meli-ingest.service — run: systemctl --user enable meli-ingest.service"
+    run_as_user systemctl --user start meli-ingest.service 2>/dev/null || \
+        warn "Could not start meli-ingest.service — run: systemctl --user start meli-ingest.service"
 
-    ok "Systemd user services installed."
+    ok "Systemd user services installed for $target_user."
 }
 
 # ── Phase 7: Mosquitto setup ──────────────────────────────────────────────────

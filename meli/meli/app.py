@@ -9,7 +9,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Gtk, Adw, GLib, Gio  # noqa: E402
+from gi.repository import Gtk, Adw, GLib, Gio, Gdk  # noqa: E402
 
 import structlog
 from meli.config import get_config
@@ -78,34 +78,43 @@ class MeliApplication(Adw.Application):
         self.set_accels_for_action("app.quit", ["<Control>q"])
 
     def _load_css(self) -> None:
+        """Load the Honey Trap theme from resources/css/style.css.
+
+        Falls back to a minimal inline stylesheet if the file is missing
+        (e.g. running from an old install that pre-dates the resource).
+        """
+        from pathlib import Path
+
         css = Gtk.CssProvider()
-        css.load_from_string("""
-            .meli-sidebar {
-                background-color: alpha(@card_bg_color, 0.95);
-                border-right: 1px solid alpha(@borders, 0.5);
-            }
-            .meli-header {
-                background-color: alpha(@headerbar_bg_color, 0.97);
-                border-bottom: 1px solid alpha(@borders, 0.6);
-            }
-            .severity-info     { color: #94a3b8; }
-            .severity-low      { color: #60a5fa; }
-            .severity-medium   { color: #f59e0b; }
-            .severity-high     { color: #f97316; }
-            .severity-critical { color: #ef4444; font-weight: bold; }
-            .monospace { font-family: "JetBrains Mono", "Fira Code", monospace; }
-            .stat-card {
-                border-radius: 12px;
-                padding: 16px;
-                background-color: alpha(@card_bg_color, 0.8);
-                border: 1px solid alpha(@borders, 0.4);
-            }
-            .event-row:hover { background-color: alpha(@accent_color, 0.08); }
-            .amber-accent { color: #f59e0b; }
-        """)
-        Gtk.StyleContext.add_provider_for_display(
-            self.get_default().get_display() if hasattr(self, 'get_display') else
-            Gtk.Widget.get_default_display(),  # type: ignore
-            css,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
-        )
+        css_path = Path(__file__).parent / "resources" / "css" / "style.css"
+        try:
+            if css_path.is_file():
+                css.load_from_path(str(css_path))
+                log.info("Loaded Honey Trap theme", path=str(css_path))
+            else:
+                raise FileNotFoundError(css_path)
+        except Exception as e:
+            log.warning("Falling back to inline CSS", error=str(e))
+            css.load_from_string("""
+                .meli-sidebar { background-color: alpha(@card_bg_color, 0.95); }
+                .meli-header  { background-color: alpha(@headerbar_bg_color, 0.97); }
+                .severity-critical { color: #dc2626; font-weight: bold; }
+                .severity-high     { color: #ea7f1c; }
+                .severity-medium   { color: #d4a017; }
+                .severity-low      { color: #fde68a; }
+                .severity-info     { color: #c2b8a3; }
+                .amber-accent { color: #f59e0b; }
+                .honey-accent { color: #d4a017; }
+                .monospace { font-family: "JetBrains Mono", monospace; }
+                .stat-card { border-radius: 14px; padding: 18px; }
+            """)
+
+        display = Gdk.Display.get_default()
+        if display is not None:
+            Gtk.StyleContext.add_provider_for_display(
+                display,
+                css,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+            )
+        else:
+            log.warning("No default display available for CSS provider")

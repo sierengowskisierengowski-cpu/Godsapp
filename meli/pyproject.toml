@@ -63,5 +63,8 @@ include = ["meli*"]
 meli = [
     "classification/default_rules.yaml",
     "reports/templates/*.j2",
+    "resources/css/*.css",
+    "resources/svg/*.svg",
+    "resources/sounds/*",
     "assets/**/*",
 ]

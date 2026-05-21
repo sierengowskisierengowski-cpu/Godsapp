@@ -5,10 +5,28 @@ Called by both the MQTT handler and HTTP ingest handler.
 from __future__ import annotations
 
 import json
+import threading
 import structlog
 from datetime import datetime, timezone
 
 log = structlog.get_logger()
+
+# Per-IP locks prevent a race where two simultaneous events from the
+# same brand-new attacker both try to INSERT the Attacker row and the
+# second one crashes on the UNIQUE constraint (losing that event).
+# A single global lock would serialise all ingest; per-IP keeps
+# unrelated traffic parallel.
+_attacker_locks: dict[str, threading.Lock] = {}
+_attacker_locks_guard = threading.Lock()
+
+
+def _lock_for_ip(ip: str) -> threading.Lock:
+    with _attacker_locks_guard:
+        lk = _attacker_locks.get(ip)
+        if lk is None:
+            lk = threading.Lock()
+            _attacker_locks[ip] = lk
+        return lk
 
 
 def process_event(raw: dict, source: str = "mqtt") -> None:
@@ -61,28 +79,30 @@ def process_event(raw: dict, source: str = "mqtt") -> None:
             db.flush()
             event_id = ev.id
 
-            # Upsert attacker record
-            attacker = db.get(Attacker, ip)
-            now = datetime.now(timezone.utc)
-            if attacker:
-                attacker.last_seen = now
-                attacker.total_events += 1
-                from meli.utils.helpers import severity_rank
-                if severity_rank(severity) > severity_rank(attacker.max_severity):
-                    attacker.max_severity = severity
-            else:
-                attacker = Attacker(
-                    ip=ip,
-                    first_seen=now,
-                    last_seen=now,
-                    total_events=1,
-                    max_severity=severity,
-                    country_code=normalized.get("country_code"),
-                )
-                db.add(attacker)
+        # Upsert attacker record (held outside the event-insert session so
+        # we don't keep that transaction open while waiting on the lock).
+        with _lock_for_ip(ip):
+            with get_db() as db:
+                attacker = db.get(Attacker, ip)
+                now = datetime.now(timezone.utc)
+                if attacker:
+                    attacker.last_seen = now
+                    attacker.total_events += 1
+                    from meli.utils.helpers import severity_rank
+                    if severity_rank(severity) > severity_rank(attacker.max_severity):
+                        attacker.max_severity = severity
+                else:
+                    attacker = Attacker(
+                        ip=ip,
+                        first_seen=now,
+                        last_seen=now,
+                        total_events=1,
+                        max_severity=severity,
+                        country_code=normalized.get("country_code"),
+                    )
+                    db.add(attacker)
 
         # Fire alerts asynchronously
-        import threading
         threading.Thread(
             target=_check_alerts,
             args=(event_id, normalized, severity),
