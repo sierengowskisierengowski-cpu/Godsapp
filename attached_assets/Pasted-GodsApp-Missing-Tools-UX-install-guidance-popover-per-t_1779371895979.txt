@@ -1,0 +1,85 @@
+GodsApp — Missing Tools UX: install guidance popover + per-tool path override
+The "Tools missing (N)" line on the dashboard is honest and good — but right now it just lists names. A user (especially a new user) sees Tools missing (17): nmap, hashcat, hydra... and has no idea what to do next. They have to leave the app, Google "how to install nmap on Arch", figure out package names, deal with AUR vs official repos, etc. We should solve this inside GodsApp.
+Required: Missing Tools popover with one-click install guidance
+When the user clicks on the "Tools missing (N)" line on the dashboard OR opens any tool whose binary isn't installed, a Missing Tools popover/modal appears showing:
+
+A grid of missing tools. Each card shows:
+
+Tool name + logo/icon
+One-line description ("Network port scanner", "GPU password cracking", etc.)
+Category badge (Recon, Web, Forensics, etc.)
+Status badge: ❌ Missing
+Difficulty badge (Beginner / Intermediate / Expert)
+
+
+Per-tool install card expansion (click any tool card):
+
+Auto-detected OS: shows the user's distro (Arch / Debian / Ubuntu / Fedora / etc.) and recommends the right command
+Copy-to-clipboard install command for that OS specifically:
+
+Arch: sudo pacman -S --needed nmap (or yay -S theharvester-git for AUR-only)
+Debian/Ubuntu: sudo apt install -y nmap
+Fedora: sudo dnf install -y nmap
+macOS: brew install nmap
+Pip: pip install theHarvester --break-system-packages
+Pipx: pipx install theHarvester
+
+
+"Install now" button — runs the install command via pkexec / sudo prompt directly from GodsApp. After install, automatically re-runs tool detection and updates the dashboard.
+"Why is this missing?" explainer — explains briefly what the tool does, why it's needed, and what features in GodsApp it unlocks. For example: "Without nmap, you cannot use Network Recon → Nmap port + service scan. You can still use Masscan as an alternative for port scanning, but service detection requires nmap."
+"Alternative tools" — if there's a related tool already installed that can do similar work, suggest it. Example: "ffuf installed — can be used in place of gobuster for fuzzing."
+"Skip this tool" — let users hide tools they don't want. Persistent flag saved to user settings. The dashboard counter accounts for skipped tools so users aren't nagged about tools they intentionally don't want.
+
+
+"Install all missing" button at the top of the popover that batches the install commands per-package-manager and runs them sequentially with a single sudo prompt. Shows a progress bar with which tool is currently installing.
+"Already installed but not detected" edge case — sometimes a tool is installed under a non-standard binary name (real example: Metasploit ships as /usr/bin/msfconsole, not metasploit). For each tool, allow the user to:
+
+Click "I have this installed" → opens a file picker to point at the binary
+The custom path gets saved to a per-tool override
+GodsApp re-checks and marks the tool as available
+
+
+
+Required: Settings → Tool Paths sub-page (per-tool override)
+A new Settings sub-page called Tool Paths:
+
+Table of all 17 tools (and any future ones added via plugins)
+For each tool:
+
+Tool name + category
+Detected status: ✅ Found at /usr/bin/... OR ❌ Not detected
+Override path field (user can manually specify a binary path)
+"Detect" button (re-checks PATH and standard locations)
+"Test" button (runs the tool with --version to verify it actually works)
+
+
+"Reset all to defaults" button at the bottom
+"Refresh all detections" button
+
+Required: Detection logic improvements
+The current detection logic is matching tool names too narrowly. Fix:
+
+Maintain an internal map of tool_id → list of acceptable binary names so each tool can be matched by ANY of its known binaries.
+For Metasploit, accept any of: msfconsole, msfvenom, msfd, metasploit
+For theHarvester, accept any of: theHarvester, theharvester, theharvester-git
+For nuclei, accept: nuclei
+For tshark, accept: tshark, wireshark-cli
+etc.
+Make all matches case-insensitive on Linux/macOS, exact-match on Windows
+Check $PATH, /usr/bin, /usr/local/bin, ~/.local/bin, ~/go/bin, common Python pipx paths
+
+Bonus: First-launch dependency check
+During the setup wizard (after authentication, before first workspace creation), run a dependency check. Show the Missing Tools popover automatically with all detected gaps and let the user install everything in one go before they even reach the dashboard. This makes the "out of the box" experience feel polished and complete.
+Real-world examples I hit during install today
+
+pacman installed metasploit-6.4.133 → GodsApp reports metasploit missing because it's looking for the wrong binary name. The real binary is /usr/bin/msfconsole.
+AUR has a broken python-aiomultiprocess dependency for theharvester-git (uses outdated [tool.flit.metadata]). User would not have any way to know this from inside GodsApp. The Missing Tools popover should offer alternative install paths (pip, pipx) when AUR fails.
+
+Quality bar
+
+This is not "nice to have." It's the difference between a tool that works for experts only vs a tool real people can actually adopt.
+Every install command in the popover must be tested on every supported distro.
+Every tool needs accurate metadata (category, description, what it unlocks, alternatives).
+The "Install all missing" button must handle failures gracefully — if one tool fails to install, the others should still proceed and the failure should be clearly explained with options to retry or skip.
+
+Author throughout: Joseph Sierengowski.

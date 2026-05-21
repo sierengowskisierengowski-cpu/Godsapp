@@ -86,6 +86,17 @@ class ReportsSettings(BaseModel):
     output_dir: str = ""  # blank → ~/.local/share/godsapp/reports
 
 
+class ToolPathsSettings(BaseModel):
+    """Per-tool detection overrides — when the user has a binary installed
+    in a non-standard location, or under an unexpected name, they can pin
+    the path here and the detector will trust it."""
+    # tool_id → absolute path to the executable
+    overrides: dict[str, str] = Field(default_factory=dict)
+    # tool_ids the user has explicitly chosen to hide from the missing-tools
+    # popover and from the dashboard "Tools missing" counter
+    skipped: list[str] = Field(default_factory=list)
+
+
 class TerminalSettings(BaseModel):
     auto_install_vte: bool = True
 
@@ -163,6 +174,7 @@ class Settings(BaseModel):
     learn: LearnSettings = Field(default_factory=LearnSettings)
     templates: TemplatesSettings = Field(default_factory=TemplatesSettings)
     dedup: DedupSettings = Field(default_factory=DedupSettings)
+    tool_paths: ToolPathsSettings = Field(default_factory=ToolPathsSettings)
     categories: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 

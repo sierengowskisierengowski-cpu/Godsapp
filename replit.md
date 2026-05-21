@@ -75,7 +75,22 @@ The only other thing in the workspace is `artifacts/mockup-sandbox/` — Replit 
 - The systemd user unit needs `Environment=PYTHONPATH=/opt/godsapp/app` if the launcher is bypassed; the bundled launcher (`/usr/local/bin/godsapp`) calls the venv binary directly, so PYTHONPATH is only used as a belt-and-suspenders.
 - On Debian/Ubuntu, `gir1.2-adw-1` is sometimes named `gir1.2-libadwaita-1` on older releases; the installer surfaces a clear error if it can't import `Adw`.
 
-## Status — v0.4.1 (latest)
+## Status — v0.5.0 (latest)
+
+**Missing-tools UX: install guidance + per-tool overrides.**
+
+- **Tool catalog** (`core/tool_catalog.py`): 38 entries with acceptable binary names (tuple, not string), per-distro install commands (pacman/apt/dnf/zypper/xbps/brew/pipx/pip/go), category, difficulty, unlocks, alternatives, and gotcha notes. Solves the `metasploit → msfconsole` mismatch and similar cases (tshark/wireshark-cli, yara/yarac, aws/aws-cli, theHarvester casing, sherlock-project pip name).
+- **Detection** (`core/tool_detect.py`): walks override path → `$PATH` for every catalog binary → standard install dirs (`/usr/bin`, `/usr/local/bin`, `/usr/sbin`, `/opt/bin`, `~/.local/bin`, `~/go/bin`, `~/.cargo/bin`, `/snap/bin`, `/var/lib/flatpak/exports/bin`, pipx venv `*/bin`). `test_binary()` runs `--version`/`-V`/`-v`/`--help` to verify. `detect_pkg_manager()` reads `/etc/os-release` (ID + ID_LIKE) and maps to a package manager.
+- **Missing Tools dialog** (`ui/missing_tools_dialog.py`): grid of expandable cards per tool with badges (category, difficulty, status), live re-detection after every action. Per-tool: **Install now** (pkexec sh -c, live subprocess polling), **Copy** install command, **Other package managers** expander, **I have this installed…** (file picker → writes to `settings.tool_paths.overrides[tool_id]`), **Skip this tool** (writes to `settings.tool_paths.skipped`). **Install all missing** groups commands by package manager and runs them as `pkexec sh -c 'cmd1 && cmd2'` — one privilege prompt per manager.
+- **Dashboard system-status card is clickable** (Gtk.GestureClick) → opens Missing Tools dialog. Skipped tools hidden from the missing counter; shows `(N skipped)` suffix and `➜ click to install` hint when applicable.
+- **ScanView shows an Adw.Banner** under the header whenever the selected tool's binary is missing, with an **Install…** button opening the dialog focused on that exact tool. Closing the dialog re-detects and hides the banner.
+- **Settings → Tool Paths** sub-page: every catalog tool listed with its resolved path (`✓ <path> [override|extra-dir|PATH]` or `✗ missing`), with per-row pick/test/clear buttons and a global "Re-detect all tools" action.
+- **`core/health.py`** rewritten — delegates entirely to the catalog + detector. `HealthReport` gained `tool_paths` and `skipped` fields. `EXTERNAL_TOOLS` is derived from the catalog now, so it stays in sync without manual edits.
+- **`ToolPathsSettings`** added to `core/settings.py` (`overrides: dict[str,str]`, `skipped: list[str]`).
+
+Tarballs: `./dist/godsapp-0.5.0.tar.gz` and `./dist/godsapp-0.5.0.zip`.
+
+## Status — v0.4.1
 
 **Polish pass: terminal + storm.**
 

@@ -14,6 +14,8 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402
 
 from godsapp.core import workspaces as ws_svc
 from godsapp.core.scans import ScanRequest, runner
+from godsapp.core.settings import load_settings
+from godsapp.core.tool_detect import detect_one
 from godsapp.tools.base import Tool, ToolOption
 from godsapp.ui.header_helpers import open_settings, page_header
 
@@ -31,6 +33,14 @@ class ScanView(Gtk.Box):
             on_settings=lambda: open_settings(parent),
             subtitle=tool.description or "",
         ))
+
+        # ── missing-binary banner ─────────────────────────────────────
+        # Surface a clear "this tool's binary isn't installed yet" hint
+        # before the user fills out a form and hits Run only to see a
+        # subprocess error in the output pane.
+        self._missing_banner: Adw.Banner | None = None
+        if tool.requires_binary:
+            self._rebuild_missing_banner()
 
         # Form
         form = Gtk.ListBox()
@@ -87,6 +97,44 @@ class ScanView(Gtk.Box):
         self.append(self._findings_box)
 
         self._unsubscribe = runner.subscribe(self._on_event)
+
+    def _rebuild_missing_banner(self) -> None:
+        """Detect the tool's binary; show / refresh a banner if missing."""
+        if not self._tool.requires_binary:
+            return
+        det = detect_one(
+            self._tool.requires_binary,
+            overrides=dict(load_settings().tool_paths.overrides),
+        )
+        if det.found:
+            if self._missing_banner is not None:
+                self._missing_banner.set_revealed(False)
+            return
+        if self._missing_banner is None:
+            banner = Adw.Banner.new(
+                f"{self._tool.requires_binary} is not installed — "
+                f"this scan will fail until you install it."
+            )
+            banner.set_button_label("Install…")
+            banner.connect("button-clicked",
+                           lambda *_: self._open_missing_dialog())
+            banner.set_revealed(True)
+            # Insert as the first child so it sits directly under the header.
+            self.insert_child_after(banner, self.get_first_child())
+            self._missing_banner = banner
+        else:
+            self._missing_banner.set_revealed(True)
+
+    def _open_missing_dialog(self) -> None:
+        from godsapp.ui.missing_tools_dialog import MissingToolsDialog
+        win = self.get_root()
+        dlg = MissingToolsDialog(
+            win if isinstance(win, Gtk.Window) else None,
+            focus_tool_id=self._tool.requires_binary,
+        )
+        dlg.connect("close-request",
+                    lambda *_: (self._rebuild_missing_banner(), False)[1])
+        dlg.present()
 
     def _reload_workspaces(self) -> None:
         self._workspaces = ws_svc.list_workspaces()

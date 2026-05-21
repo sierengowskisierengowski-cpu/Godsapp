@@ -17,6 +17,8 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402
 from godsapp import __version__
 from godsapp.core import paths
 from godsapp.core.settings import Settings, load_settings, save_settings
+from godsapp.core.tool_catalog import CATALOG
+from godsapp.core.tool_detect import detect_all, detect_one, test_binary
 from godsapp.tools import registry
 
 
@@ -277,6 +279,11 @@ class SettingsView(Gtk.Box):
                                          spec["subtitle"], spec["fields"])
             self._stack.add_titled(page, spec["key"], spec["title"])
 
+        # Tool Paths: dedicated sub-page (custom rendering — not a simple
+        # field form). Lets the user pin per-tool override paths, test
+        # them, and run a one-click "re-detect everything" sweep.
+        self._stack.add_titled(self._build_tool_paths_page(), "tool_paths", "Tool Paths")
+
         # Per-tool-category sub-pages: build from the live registry.
         for cat, tools in registry.by_category().items():
             page = self._build_category_page(cat, tools)
@@ -285,6 +292,134 @@ class SettingsView(Gtk.Box):
         # About
         about_page = self._build_about_page()
         self._stack.add_titled(about_page, "about", "About")
+
+    # ── tool paths page ───────────────────────────────────────────────────
+    def _build_tool_paths_page(self) -> Gtk.Widget:
+        outer = Adw.PreferencesPage()
+        group = Adw.PreferencesGroup(
+            title="Tool Paths",
+            description=("Per-tool detection overrides. Useful when a binary "
+                         "lives in a non-standard location (Snap, Flatpak, "
+                         "a custom prefix) or has been installed under an "
+                         "unexpected name."),
+        )
+        outer.add(group)
+
+        # Re-detect everything button
+        actions = Gtk.Box(spacing=8)
+        redetect = Gtk.Button(label="Re-detect all tools")
+        redetect.add_css_class("suggested-action")
+        redetect.connect("clicked", lambda *_: self._refresh_tool_path_rows())
+        actions.append(redetect)
+        open_missing = Gtk.Button(label="Open Missing Tools dialog…")
+        open_missing.connect("clicked", lambda *_: self._open_missing_dialog())
+        actions.append(open_missing)
+        actions_row = Adw.ActionRow()
+        actions_row.add_prefix(actions)
+        group.add(actions_row)
+
+        # One ActionRow per cataloged tool, with the resolved path and a
+        # "Set…" / "Test" / "Clear" trio.
+        self._tool_path_rows: dict[str, Adw.ActionRow] = {}
+        self._tool_path_status: dict[str, Gtk.Label] = {}
+        for tid in sorted(CATALOG.keys()):
+            entry = CATALOG[tid]
+            row = Adw.ActionRow(title=entry.title,
+                                subtitle=f"{tid}  ·  {entry.category}")
+            status = Gtk.Label(xalign=1); status.add_css_class("dim-label")
+            status.set_xalign(1); status.set_hexpand(False)
+            status.set_max_width_chars(60); status.set_ellipsize(3)
+            row.add_suffix(status)
+
+            set_btn = Gtk.Button.new_from_icon_name("document-open-symbolic")
+            set_btn.set_tooltip_text("Pick binary…")
+            set_btn.add_css_class("flat")
+            set_btn.connect("clicked", lambda _b, t=tid: self._pick_override(t))
+            row.add_suffix(set_btn)
+
+            test_btn = Gtk.Button.new_from_icon_name("emblem-ok-symbolic")
+            test_btn.set_tooltip_text("Test binary")
+            test_btn.add_css_class("flat")
+            test_btn.connect("clicked", lambda _b, t=tid: self._test_tool(t))
+            row.add_suffix(test_btn)
+
+            clear_btn = Gtk.Button.new_from_icon_name("edit-clear-symbolic")
+            clear_btn.set_tooltip_text("Clear override")
+            clear_btn.add_css_class("flat")
+            clear_btn.connect("clicked", lambda _b, t=tid: self._clear_override(t))
+            row.add_suffix(clear_btn)
+
+            group.add(row)
+            self._tool_path_rows[tid] = row
+            self._tool_path_status[tid] = status
+
+        self._refresh_tool_path_rows()
+        return outer
+
+    def _refresh_tool_path_rows(self) -> None:
+        s = load_settings()
+        self._settings = s
+        dets = detect_all(overrides=dict(s.tool_paths.overrides))
+        for tid, status in self._tool_path_status.items():
+            d = dets.get(tid)
+            if d is None:
+                status.set_text("?")
+                continue
+            if d.found:
+                tag = "override" if d.via_override else ("extra-dir" if d.via_extra_dir else "PATH")
+                status.set_text(f"✓ {d.path}  [{tag}]")
+            else:
+                ov = s.tool_paths.overrides.get(tid, "")
+                status.set_text(f"✗ missing" + (f"  (override: {ov})" if ov else ""))
+
+    def _pick_override(self, tool_id: str) -> None:
+        entry = CATALOG.get(tool_id)
+        if entry is None:
+            return
+        dialog = Gtk.FileDialog()
+        dialog.set_title(f"Locate {entry.title} binary")
+        win = self.get_root()
+        parent_win = win if isinstance(win, Gtk.Window) else None
+        def _cb(d, res):
+            try:
+                f = d.open_finish(res)
+            except Exception:
+                return
+            if f is None:
+                return
+            path = f.get_path()
+            if not path:
+                return
+            s = load_settings()
+            s.tool_paths.overrides[tool_id] = path
+            save_settings(s)
+            self._refresh_tool_path_rows()
+        dialog.open(parent_win, None, _cb)
+
+    def _clear_override(self, tool_id: str) -> None:
+        s = load_settings()
+        if tool_id in s.tool_paths.overrides:
+            del s.tool_paths.overrides[tool_id]
+            save_settings(s)
+        self._refresh_tool_path_rows()
+
+    def _test_tool(self, tool_id: str) -> None:
+        s = load_settings()
+        d = detect_one(tool_id, overrides=dict(s.tool_paths.overrides))
+        if not d.found or not d.path:
+            self._tool_path_status[tool_id].set_text("✗ not detected — set an override first")
+            return
+        ok, line = test_binary(d.path)
+        prefix = "✓" if ok else "✗"
+        self._tool_path_status[tool_id].set_text(f"{prefix} {d.path}  →  {line[:120]}")
+
+    def _open_missing_dialog(self) -> None:
+        from godsapp.ui.missing_tools_dialog import MissingToolsDialog
+        win = self.get_root()
+        dlg = MissingToolsDialog(win if isinstance(win, Gtk.Window) else None)
+        dlg.connect("close-request",
+                    lambda *_: (self._refresh_tool_path_rows(), False)[1])
+        dlg.present()
 
     # ── navigation ────────────────────────────────────────────────────────
     def goto(self, anchor: str) -> None:

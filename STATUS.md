@@ -10,7 +10,9 @@ Repo: <https://github.com/sierengowskisierengowski-cpu/Godsapp>
 
 ## Views
 
-- [x] **Dashboard** — counts (workspaces / scans / findings / evidence), live system health, settings-cog shortcut
+- [x] **Dashboard** — counts (workspaces / scans / findings / evidence), live system health, settings-cog shortcut, **clickable System-status card opens Missing Tools dialog (v0.5.0)**
+- [x] **Missing Tools dialog** (v0.5.0) — per-tool install command, pkexec install-now, "Install all missing" batched per package manager, "I have this installed" file picker, skip-this-tool toggle, live re-detection
+- [x] **Settings → Tool Paths** (v0.5.0) — per-tool override path with pick/test/clear, re-detect-all sweep
 - [x] **Workspaces** — list, create, edit, delete (full CRUD against DB)
 - [x] **Evidence Locker** — ingest, list, integrity verify (chain-of-custody rows written on every action)
 - [x] **Settings (Master)** — REST API toggle/port/token, DB URL override, matrix-scramble toggle

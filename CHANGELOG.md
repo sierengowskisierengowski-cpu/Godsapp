@@ -2,6 +2,49 @@
 
 All notable changes to GodsApp.
 
+## [0.5.0] — 2026-05-21
+
+### Missing-tools UX — install guidance, overrides, batch install
+
+**Tool catalog**
+- New `core/tool_catalog.py` shipping 38 catalog entries — every external binary the app shells out to. Each entry carries acceptable binary names (a tuple, not a single string), category, difficulty, real per-distro install commands (`pacman` / `apt` / `dnf` / `zypper` / `xbps` / `brew` / `pipx` / `pip` / `go`), a short "unlocks" list, alternative tools, and gotcha notes.
+- Metasploit is the headline example: `pacman -S metasploit` installs `/usr/bin/msfconsole` with no `/usr/bin/metasploit`, so the catalog accepts `msfvenom`, `msfconsole`, `msfd`, or `metasploit`. Same trick for `tshark`/`wireshark-cli`, `yara`/`yarac`, `aws`/`aws-cli`, `sherlock`/`sherlock-project`, and `theHarvester`/`theharvester`/`theharvester-git`.
+
+**Detection engine**
+- New `core/tool_detect.py`. `detect_one(tool_id, overrides=…)` walks (1) user override path, (2) every catalog binary against `$PATH`, (3) standard install dirs outside `$PATH` — `/usr/bin`, `/usr/local/bin`, `/usr/sbin`, `/opt/bin`, `~/.local/bin`, `~/go/bin`, `~/.cargo/bin`, `/snap/bin`, `/var/lib/flatpak/exports/bin`, plus a one-level descent into `~/.local/share/pipx/venvs/*/bin/`.
+- `test_binary(path)` runs `--version` / `-V` / `-v` / `--help` to verify the binary actually executes.
+- `detect_pkg_manager()` reads `/etc/os-release` and maps `ID` + `ID_LIKE` to `pacman` / `apt` / `dnf` / `zypper` / `xbps`, falls back to `apt` on unknown Linux, `brew` on macOS.
+- `install_cmd_for(entry, mgr)` returns the install command for the user's manager, falling back through `pipx → pip → brew → go` so we always have *something* to offer.
+
+**Health probe**
+- `core/health.py` now delegates entirely to the catalog + detector — no more hardcoded `EXTERNAL_TOOLS` list. `HealthReport` gained `tool_paths` (the resolved binary path per tool) and `skipped` (the user's dismissed set) so the dashboard counter can ignore intentionally-skipped tools without lying about totals.
+
+**Missing Tools dialog (`ui/missing_tools_dialog.py`)**
+- New modal `Adw.Window` with one expandable card per tool. Missing tools surface first, then skipped (collapsed), then installed. Each card carries category + difficulty badges, a found/skipped/missing status pill, and live re-detection.
+- Per-tool actions:
+  - **Install now** — runs the install command via `pkexec sh -c '<cmd>'` (or plain `sh -c` for user-side managers like `pipx`/`brew`/`go`). Polls the subprocess at 400 ms, updates the button label live, then re-detects the single tool and refreshes its card.
+  - **Copy** — one-click copy of the exact install command to clipboard.
+  - **Other package managers** — collapsed expander with every alt-manager command so a user on an unrecognised distro isn't stuck.
+  - **I have this installed…** — `Gtk.FileDialog` to pick the binary; writes the path to `settings.tool_paths.overrides[tool_id]` and re-detects.
+  - **Skip this tool** — toggles `settings.tool_paths.skipped`; hides the tool from the dashboard's missing counter.
+- **Install all missing** batcher groups commands by package manager and runs them sequentially as `pkexec sh -c 'cmd1 && cmd2 && …'` per manager — single privilege prompt per manager, regardless of how many tools you batched.
+
+**Dashboard wiring**
+- The "System status" card on the dashboard is now clickable (`Gtk.GestureClick`). Clicking opens the Missing Tools dialog; closing the dialog re-renders the card with the new available/missing counts.
+- Missing-tools line now shows a "➜ click to install" hint when there's anything to fix, plus a `(N skipped)` suffix when the user has dismissed some.
+
+**Scan view banner**
+- Every per-tool `ScanView` whose `requires_binary` isn't detected now shows an `Adw.Banner` directly under the page header — "X is not installed — this scan will fail until you install it." with an **Install…** button that opens the Missing Tools dialog focused on that exact tool. Closing the dialog re-detects and hides the banner if you fixed it.
+
+**Settings → Tool Paths**
+- New dedicated sub-page in `Settings`. Lists every catalog tool with its current detection state (`✓ <path> [override|extra-dir|PATH]` or `✗ missing`), plus three per-row actions: pick binary, test (`--version` probe), clear override.
+- Top of the page has a **Re-detect all tools** button and a shortcut to open the full Missing Tools dialog.
+
+**Settings schema**
+- `ToolPathsSettings(overrides: dict[str,str], skipped: list[str])` added to `core/settings.py` and wired into the root `Settings` model.
+
+Tarballs: `./dist/godsapp-0.5.0.tar.gz` and `./dist/godsapp-0.5.0.zip`.
+
 ## [0.4.1] — 2026-05-21
 
 ### Polish pass — terminal + storm tuning

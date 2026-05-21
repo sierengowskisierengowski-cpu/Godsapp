@@ -74,9 +74,18 @@ class DashboardView(Gtk.Box):
         self._status_label = Gtk.Label(xalign=0)
         self._status_label.set_wrap(True)
         self._status_label.add_css_class("status-body")
-        row.append(self._card("System status",
-                              "Database, REST API, and external tool availability.",
-                              self._status_label))
+        self._missing_ids: list[str] = []
+        self._status_card = self._card(
+            "System status",
+            "Database, REST API, and external tool availability. Click to manage missing tools.",
+            self._status_label,
+        )
+        self._status_card.add_css_class("clickable-card")
+        _status_click = Gtk.GestureClick()
+        _status_click.connect("released",
+                              lambda *_: self._open_missing_tools_dialog())
+        self._status_card.add_controller(_status_click)
+        row.append(self._status_card)
         inner.append(row)
 
         # Quick actions
@@ -257,14 +266,42 @@ class DashboardView(Gtk.Box):
     def _render_status(self) -> None:
         try:
             report = check_health()
-            missing = [t for t, ok in report.tools.items() if not ok]
+            skipped = report.skipped
             present = [t for t, ok in report.tools.items() if ok]
+            # Honest counter: skipped tools count as "intentionally absent"
+            # so we DON'T nag the user about them in the missing total.
+            missing = [t for t, ok in report.tools.items()
+                       if not ok and t not in skipped]
+            hidden_missing = [t for t, ok in report.tools.items()
+                              if not ok and t in skipped]
             lines = [
                 f"●  Database: {'OK' if report.db_ok else 'ERROR'}   {report.db_url}",
                 f"●  REST API: {'running' if report.api_running else 'stopped (off by default)'}",
                 f"●  Tools available ({len(present)}):  {', '.join(present) or 'none'}",
-                f"●  Tools missing  ({len(missing)}):  {', '.join(missing) or 'none'}",
             ]
-            self._status_label.set_text("\n".join(lines))
+            tail = (f"●  Tools missing  ({len(missing)}):  {', '.join(missing) or 'none'}"
+                    + (f"  ·  ({len(hidden_missing)} skipped)" if hidden_missing else ""))
+            if missing:
+                tail += "    ➜ click to install"
+            self._status_label.set_text("\n".join(lines + [tail]))
+            self._missing_ids = missing
+            # Make the whole status label clickable when there is something to fix.
+            try:
+                self._status_card.set_sensitive(True)
+            except Exception:
+                pass
         except Exception as e:
             self._status_label.set_text(f"health check failed: {e}")
+            self._missing_ids = []
+
+    def _open_missing_tools_dialog(self) -> None:
+        # Lazy import so the dashboard module doesn't pull GTK widgets it
+        # doesn't need at import time.
+        from godsapp.ui.missing_tools_dialog import MissingToolsDialog
+        win = self.get_root()
+        dialog = MissingToolsDialog(win if isinstance(win, Gtk.Window) else None)
+        dialog.present()
+        # Re-render the status card once the dialog is closed so the new
+        # available/missing counts show immediately.
+        dialog.connect("close-request",
+                       lambda *_: (self._render_status(), False)[1])
