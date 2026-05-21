@@ -138,3 +138,9 @@ id = "mrxGrRkRyg-pyG0MBGHvZ"
 uri = "file://meli/docs/logo_variants_v1.png"
 type = "image"
 title = "Meli — 4 logo variants (first pass)"
+
+[[outputs]]
+id = "_qViDjc86FGHCQ-zopw23"
+uri = "file://meli/docs/honeypot_centerpiece_states.png"
+type = "image"
+title = "Amphora centerpiece — empty / active / overflowing"
