@@ -125,17 +125,41 @@ class SplashWindow(Adw.Window):
         ]
         self._fired = [False]*len(self._schedule)
 
-        # phase labels (extended to ~6.5s total)
-        self._phase_until = [
-            (0.4,  ""),
-            (0.9,  "GATHERING THE STORM"),
-            (1.9,  "SUMMONING ZEUS"),
-            (2.9,  "FORGING THE BOLT"),
-            (3.7,  "STRIKE"),
-            (4.7,  "RIDING THE THUNDER"),
-            (5.6,  "ASCENDING OLYMPUS"),
-            (10.0, "OPEN THE GATES"),
+        # Real boot-step counts so the splash narrates what actually happened
+        # during startup, not mystical filler. All cheap lookups — splash runs
+        # AFTER do_startup() so init_db/load_builtin already completed.
+        try:
+            from godsapp.tools import registry as _reg
+            n_tools = sum(len(v) for v in _reg.by_category().values())
+            n_cats = len([v for v in _reg.by_category().values() if v])
+        except Exception:
+            n_tools, n_cats = 0, 0
+        try:
+            from godsapp.core.settings import load_settings as _ls
+            n_plugins = len(_ls().plugins.enabled or []) if _ls().plugins.auto_load else 0
+        except Exception:
+            n_plugins = 0
+        try:
+            from sqlalchemy import select as _sel, func as _fn
+            from godsapp.db import Finding as _F, Workspace as _W, get_session as _gs
+            with _gs() as _s:
+                n_ws = _s.execute(_sel(_fn.count()).select_from(_W)).scalar() or 0
+                n_fnd = _s.execute(_sel(_fn.count()).select_from(_F)).scalar() or 0
+        except Exception:
+            n_ws, n_fnd = 0, 0
+
+        # Strike-synchronised announcements: each strike fires a real-step label.
+        # (when, headline, subline)  — when == schedule time of the matching strike.
+        self._strike_labels: list[tuple[float, str, str]] = [
+            (0.55, "FORGING THE FOUNDATION", "config + log + data paths armed"),
+            (1.55, "AWAKENING THE ARCHIVE",  f"database online · {n_ws} workspace(s) · {n_fnd} finding(s)"),
+            (2.55, "SUMMONING THE ARSENAL",  f"{n_tools} tools across {n_cats} categories registered"),
+            (3.30, "BINDING THE PLUGINS",    f"plugin loader ready · {n_plugins} enabled"),
+            (4.40, "TUNING THE SCHEDULER",   "background runner & audit trail online"),
+            (5.10, "OPENING THE GATES",      "all systems hot — strike when ready"),
         ]
+        # Most-recent (born_t, headline, subline) — what the painter renders.
+        self._active_label: tuple[float, str, str] | None = None
 
     # ── input ───────────────────────────────────────────────────────────
     def _on_key(self, _ctrl, keyval, _kc, _state) -> bool:
@@ -161,6 +185,12 @@ class SplashWindow(Adw.Window):
             if not self._fired[i] and t >= when:
                 self._fired[i] = True
                 self._spawn_storm(dur, inten, finale=(i == len(self._schedule)-1))
+                # Match this strike to its boot-step announcement (if any) so
+                # the headline appears the instant the bolt cracks.
+                for sw, head, sub in self._strike_labels:
+                    if abs(sw - when) < 0.01:
+                        self._active_label = (now, head, sub)
+                        break
         # Cull expired strikes/flashes
         self._strikes = [s for s in self._strikes if now - s.born < s.duration]
         self._flashes = [f for f in self._flashes if now - f[0] < f[1]]
@@ -187,11 +217,25 @@ class SplashWindow(Adw.Window):
         # full-window white flash
         self._flashes.append((now, 0.45 if not finale else 0.75, inten))
 
-    def _phase_label(self, t: float) -> str:
-        for until, label in self._phase_until:
-            if t < until:
-                return label
-        return ""
+    def _current_announcement(self, now: float) -> tuple[str, str, float] | None:
+        """Return (headline, subline, alpha 0..1) for the live strike label.
+        Animation: quick snap-on (60ms) → hold (700ms) → fade-out (700ms)."""
+        if self._active_label is None:
+            return None
+        born, head, sub = self._active_label
+        age = now - born
+        SNAP, HOLD, FADE = 0.06, 0.70, 0.70
+        if age < 0:
+            return None
+        if age < SNAP:
+            a = age / SNAP
+        elif age < SNAP + HOLD:
+            a = 1.0
+        elif age < SNAP + HOLD + FADE:
+            a = 1.0 - (age - SNAP - HOLD) / FADE
+        else:
+            return None
+        return head, sub, max(0.0, min(1.0, a))
 
     # ── draw ────────────────────────────────────────────────────────────
     def _draw(self, _area, cr, width, height, _user):
@@ -347,10 +391,19 @@ class SplashWindow(Adw.Window):
              fade_sub*0.75, letter_em=0.30,
              color=(0.85, 0.90, 1.0), shadow=(0.4, 0.6, 1.0, 0.3))
 
-        phase = self._phase_label(t)
-        if phase:
-            text(cr, phase, 12, height - 80, 0.85, letter_em=0.55,
-                 color=(1.0, 0.88, 0.55), shadow=(1.0, 0.7, 0.2, 0.4))
+        # Strike-synchronised announcement — appears the instant a bolt fires
+        # and fades out by the next strike, naming the real boot step.
+        ann = self._current_announcement(now)
+        if ann is not None:
+            head, sub, a = ann
+            # Headline: BIG bright gold, near the bottom of the window so it
+            # never collides with the centered logo/title block.
+            text(cr, head, 28, height - 145, a, letter_em=0.45,
+                 color=(1.0, 0.92, 0.62),
+                 shadow=(1.0, 0.70, 0.25, 0.65))
+            text(cr, sub, 13, height - 100, a*0.90, letter_em=0.30,
+                 color=(0.92, 0.96, 1.0),
+                 shadow=(0.30, 0.55, 1.0, 0.45))
         text(cr, "PRESS SPACE OR CLICK TO ENTER", 9, height - 50, 0.55,
              letter_em=0.45, color=(0.7, 0.78, 0.95),
              shadow=(0.0, 0.0, 0.0, 0.0))
