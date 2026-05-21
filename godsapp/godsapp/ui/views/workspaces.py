@@ -9,6 +9,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from godsapp.core import workspaces as ws_svc
+from godsapp.ui.header_helpers import open_settings, page_header
 
 
 class WorkspacesView(Gtk.Box):
@@ -18,14 +19,15 @@ class WorkspacesView(Gtk.Box):
         self.set_margin_start(20); self.set_margin_end(20)
         self._parent = parent
 
-        head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        title = Gtk.Label(label="Workspaces", xalign=0)
-        title.add_css_class("view-title"); title.set_hexpand(True)
         new_btn = Gtk.Button(label="New workspace")
         new_btn.add_css_class("suggested-action")
         new_btn.connect("clicked", lambda *_: self._open_editor(None))
-        head.append(title); head.append(new_btn)
-        self.append(head)
+        self.append(page_header(
+            "Workspaces",
+            on_settings=lambda: open_settings(parent),
+            trailing=[new_btn],
+            subtitle="Group scans, findings and evidence by engagement.",
+        ))
 
         self._list_box = Gtk.ListBox()
         self._list_box.add_css_class("boxed-list")

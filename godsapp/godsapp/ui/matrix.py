@@ -36,17 +36,36 @@ def attach(label: Gtk.Label, *, frames: int = 14, interval_ms: int = 28) -> None
     and re-checks the setting on each hover so toggling Settings takes
     effect immediately for newly-hovered rows.
     """
-    state: dict[str, Optional[int]] = {"src": None}
+    state: dict[str, Optional[object]] = {"src": None, "original": None}
+
+    def _restore() -> None:
+        if state["src"] is not None:
+            try:
+                GLib.source_remove(state["src"])  # type: ignore[arg-type]
+            except Exception:
+                pass
+            state["src"] = None
+        if state["original"] is not None:
+            label.set_text(str(state["original"]))
 
     def on_enter(_ctrl, _x, _y) -> None:
         if not _enabled():
             return
+        # Always read original from the live label, snapshotting before we mutate.
         target = label.get_text()
         if not target or any(c not in string.printable for c in target):
             return
-        if state["src"] is not None:
-            GLib.source_remove(state["src"])
+        # If we were mid-scramble from a previous hover, restore first
+        # so re-hovering doesn't snapshot the scrambled glyphs as "original".
+        if state["src"] is not None and state["original"] is not None:
+            label.set_text(str(state["original"]))
+            try:
+                GLib.source_remove(state["src"])  # type: ignore[arg-type]
+            except Exception:
+                pass
             state["src"] = None
+            target = label.get_text()
+        state["original"] = target
 
         # progress[i] == True means character i has resolved
         n = len(target)
@@ -76,11 +95,7 @@ def attach(label: Gtk.Label, *, frames: int = 14, interval_ms: int = 28) -> None
         state["src"] = GLib.timeout_add(interval_ms, tick)
 
     def on_leave(_ctrl) -> None:
-        if state["src"] is not None:
-            GLib.source_remove(state["src"])
-            state["src"] = None
-            # Snap back to original text
-            # (the original is stored implicitly by the most recent set_text)
+        _restore()
 
     ctrl = Gtk.EventControllerMotion.new()
     ctrl.connect("enter", on_enter)

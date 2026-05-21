@@ -29,6 +29,14 @@
 @define-color godsapp_success   #6abf6a;
 
 /* ──────────────  animations  ────────────── */
+@keyframes logo-pulse {
+  0%,100% { opacity: 0.78; }
+  50%     { opacity: 1.00; }
+}
+.logo-image {
+  animation: logo-pulse 2.4s ease-in-out infinite;
+}
+
 @keyframes bolt-glow {
   0%   { color: @godsapp_cream;     text-shadow: 0 0 4px alpha(@godsapp_butter, 0.55), 0 0 10px alpha(@godsapp_butter, 0.35); }
   50%  { color: @godsapp_cream_high;text-shadow: 0 0 10px alpha(@godsapp_cream_high, 0.95), 0 0 22px alpha(@godsapp_butter, 0.75), 0 0 32px alpha(@godsapp_butter, 0.45); }

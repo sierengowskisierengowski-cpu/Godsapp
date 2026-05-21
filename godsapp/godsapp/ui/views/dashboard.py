@@ -13,6 +13,7 @@ from gi.repository import Adw, Gtk  # noqa: E402
 from godsapp import __app_name__
 from godsapp.core.health import check_health
 from godsapp.db import Evidence, Finding, Scan, Workspace, get_session
+from godsapp.ui.header_helpers import open_settings, page_header
 
 
 class DashboardView(Gtk.Box):
@@ -29,19 +30,12 @@ class DashboardView(Gtk.Box):
         clamp.set_child(inner)
         self.append(clamp)
 
-        # Hero
-        hero = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        hero.add_css_class("hero")
-        title = Gtk.Label(label=f"Welcome to {__app_name__}", xalign=0)
-        title.add_css_class("hero-title")
-        sub = Gtk.Label(
-            label="Professional security auditing & research suite. Pick a tool from the sidebar to start.",
-            xalign=0,
-        )
-        sub.add_css_class("hero-sub")
-        sub.set_wrap(True)
-        hero.append(title); hero.append(sub)
-        inner.append(hero)
+        # Hero with settings cog
+        inner.append(page_header(
+            f"Welcome to {__app_name__}",
+            on_settings=lambda: open_settings(parent),
+            subtitle="Professional security auditing & research suite. Pick a tool from the sidebar to start.",
+        ))
 
         # Stat tiles
         self._tile_workspaces = self._tile("Workspaces", "0", "folder-symbolic")

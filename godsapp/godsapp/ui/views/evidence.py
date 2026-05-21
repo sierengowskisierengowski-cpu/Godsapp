@@ -9,6 +9,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gtk  # noqa: E402
 
 from godsapp.core import evidence as ev_svc
+from godsapp.ui.header_helpers import open_settings, page_header
 
 
 class EvidenceView(Gtk.Box):
@@ -18,19 +19,15 @@ class EvidenceView(Gtk.Box):
         self.set_margin_start(20); self.set_margin_end(20)
         self._parent = parent
 
-        head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        title = Gtk.Label(label="Evidence Locker", xalign=0)
-        title.add_css_class("view-title"); title.set_hexpand(True)
         ingest_btn = Gtk.Button(label="Ingest file")
         ingest_btn.add_css_class("suggested-action")
         ingest_btn.connect("clicked", lambda *_: self._pick_file())
-        head.append(title); head.append(ingest_btn)
-        self.append(head)
-
-        sub = Gtk.Label(xalign=0)
-        sub.add_css_class("dim-label")
-        sub.set_text("Files are content-addressed by SHA-256 and tracked in the chain of custody.")
-        self.append(sub)
+        self.append(page_header(
+            "Evidence Locker",
+            on_settings=lambda: open_settings(parent),
+            trailing=[ingest_btn],
+            subtitle="Content-addressed by SHA-256. Every read/write/export is recorded in the chain of custody.",
+        ))
 
         self._list_box = Gtk.ListBox()
         self._list_box.add_css_class("boxed-list")

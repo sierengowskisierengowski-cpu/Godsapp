@@ -129,12 +129,28 @@ class MainWindow(Adw.ApplicationWindow):
     def _build_title(self) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         box.add_css_class("title-box")
-        bolt = Gtk.Label(label="⚡")
-        bolt.add_css_class("title-bolt")
-        bolt.add_css_class("bolt-logo")
+
+        # Cloud-with-lightning-bolt logo from the packaged SVG resource.
+        # Falls back to the unicode bolt if the resource can't be resolved
+        # (e.g. running from a zipped wheel without extracted assets).
+        logo: Gtk.Widget
+        try:
+            from importlib.resources import files
+            svg_path = files("godsapp.resources.icons").joinpath("godsapp-logo.svg")
+            img = Gtk.Image.new_from_file(str(svg_path))
+            img.set_pixel_size(28)
+            img.add_css_class("logo-image")
+            img.add_css_class("bolt-logo")
+            logo = img
+        except Exception:
+            lbl = Gtk.Label(label="☁⚡")
+            lbl.add_css_class("title-bolt")
+            lbl.add_css_class("bolt-logo")
+            logo = lbl
+
         title = Gtk.Label(label=__app_name__.upper())
         title.add_css_class("title-main")
-        box.append(bolt)
+        box.append(logo)
         box.append(title)
         return box
 

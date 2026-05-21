@@ -75,6 +75,19 @@ The only other thing in the workspace is `artifacts/mockup-sandbox/` — Replit 
 - The systemd user unit needs `Environment=PYTHONPATH=/opt/godsapp/app` if the launcher is bypassed; the bundled launcher (`/usr/local/bin/godsapp`) calls the venv binary directly, so PYTHONPATH is only used as a belt-and-suspenders.
 - On Debian/Ubuntu, `gir1.2-adw-1` is sometimes named `gir1.2-libadwaita-1` on older releases; the installer surfaces a clear error if it can't import `Adw`.
 
+## Status — v0.2.0 (latest)
+
+- All 12 sidebar tool categories populated with **real subprocess wrappers** (30 tools total). Web, network, password, exploit, wireless, forensics, malware, osint, crypto, mobile, cloud all ship.
+- Cream / ivory off-white palette on translucent dark base; `alpha()` surfaces on window, sidebar, cards (compositor-side blur on KWin/COSMIC/Mutter).
+- Cloud-with-lightning-bolt SVG logo in the title bar with opacity-pulse keyframe animation. Same SVG used as the app icon.
+- State-coloured animated window border (`state-idle` cream / `state-running` blue / `state-ok` green / `state-err` red) driven by `ScanRunner` event subscription.
+- Matrix-scramble hover effect on sidebar category labels and pinned items (reads `Settings.ui.matrix_scramble` each hover).
+- Settings cog on every page (Dashboard / Workspaces / Evidence / Scan views) → jumps to master Settings. Per-category sub-pages queued.
+- Pinned items refresh their underlying view on entry so the data is never stale.
+- `STATUS.md` at repo root tracks every view / category / tool with honest checkboxes. `CHANGELOG.md` documents both v0.1.0 and v0.2.0.
+
+See `STATUS.md` for the full implementation matrix and the prioritised next-wave list.
+
 ## Status — v0.1.0
 
 Foundation complete:

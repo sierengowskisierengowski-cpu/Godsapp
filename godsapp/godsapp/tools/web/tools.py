@@ -146,8 +146,8 @@ class WhatWebTool(Tool):
                         "host": entry.get("target", target),
                         "service": "http", "data": data if isinstance(data, dict) else {},
                     })
-        except Exception:
-            pass
+        except Exception as e:
+            on_stderr(f"whatweb json parse failed: {type(e).__name__}: {e}\n")
         return ToolResult(exit_code=rc, findings=findings, meta={"command": cmd})
 
 

@@ -1,18 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<!-- GodsApp app icon — cloud with a lightning bolt. Author: Joseph Sierengowski. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <linearGradient id="cloudGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#3a2f22"/>
-      <stop offset="100%" stop-color="#1d1812"/>
+    <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#fdfaf2"/>
+      <stop offset="60%"  stop-color="#ebd7af"/>
+      <stop offset="100%" stop-color="#d4b87a"/>
     </linearGradient>
-    <linearGradient id="boltGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ebd7af"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#fdfaf2"/>
       <stop offset="100%" stop-color="#d4b87a"/>
     </linearGradient>
   </defs>
   <rect width="128" height="128" rx="22" fill="#15110d"/>
-  <path d="M30 80a18 18 0 0 1 7-35 24 24 0 0 1 46 4 16 16 0 0 1 12 31z"
-        fill="url(#cloudGrad)" stroke="#a89272" stroke-width="2"/>
-  <path d="M66 40 L48 76 L62 76 L54 100 L82 64 L68 64 L78 40 Z"
-        fill="url(#boltGrad)" stroke="#15110d" stroke-width="1.5"/>
+  <path d="M30 84 Q14 84 14 68 Q14 52 32 50 Q36 32 56 32 Q80 32 84 54 Q108 54 108 72 Q108 84 92 84 Z"
+        fill="url(#cg)" stroke="#4a3a28" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M70 38 L46 78 L62 78 L54 104 L86 64 L70 64 L78 38 Z"
+        fill="url(#bg)" stroke="#4a3a28" stroke-width="2" stroke-linejoin="round"/>
 </svg>

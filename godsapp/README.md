@@ -4,7 +4,11 @@
 
 Author: Joseph Sierengowski · License: GPL-3.0-or-later
 
-GodsApp unifies reconnaissance, web app testing, network analysis, password auditing, exploitation, OSINT, forensics and more into one cohesive Adwaita desktop interface. Tools run as managed subprocesses with live output, structured findings, and a tamper-evident evidence locker.
+GodsApp unifies reconnaissance, web app testing, network analysis, password auditing, exploitation, OSINT, forensics, malware analysis, OSINT, crypto, mobile and cloud auditing into one cohesive Adwaita desktop interface. Tools run as managed subprocesses with live output, structured findings, and a tamper-evident evidence locker.
+
+> **Build status:** see [`STATUS.md`](../STATUS.md) at the repo root for the honest checkbox-by-checkbox status of every view, category, and tool. Boxes are only checked when the feature is actually wired up and does its real job — no placeholders.
+
+Visual identity: warm cream / ivory foreground on a translucent deep-brown base, cloud-with-lightning-bolt logo (pulsates), state-coloured animated window border (idle / running / ok / error), matrix-scramble hover effect on navigation labels.
 
 ---
 

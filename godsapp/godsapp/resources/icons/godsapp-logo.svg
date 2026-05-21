@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- GodsApp logo: cloud with a lightning bolt punched through it.
+     Cream / ivory palette to match the in-app theme. Author: Joseph Sierengowski. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="cloudGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#fdfaf2"/>
+      <stop offset="60%"  stop-color="#ebd7af"/>
+      <stop offset="100%" stop-color="#d4b87a"/>
+    </linearGradient>
+    <linearGradient id="boltGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#fdfaf2"/>
+      <stop offset="100%" stop-color="#d4b87a"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- cloud body -->
+  <path d="M30 84
+           Q14 84 14 68
+           Q14 52 32 50
+           Q36 32 56 32
+           Q80 32 84 54
+           Q108 54 108 72
+           Q108 84 92 84 Z"
+        fill="url(#cloudGrad)"
+        stroke="#4a3a28" stroke-width="2.5"
+        stroke-linejoin="round"/>
+  <!-- lightning bolt (through the cloud) -->
+  <path d="M70 38
+           L46 78
+           L62 78
+           L54 104
+           L86 64
+           L70 64
+           L78 38 Z"
+        fill="url(#boltGrad)"
+        stroke="#4a3a28" stroke-width="2"
+        stroke-linejoin="round"
+        filter="url(#glow)"/>
+</svg>

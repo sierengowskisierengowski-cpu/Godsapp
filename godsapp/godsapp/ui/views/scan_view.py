@@ -15,6 +15,7 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402
 from godsapp.core import workspaces as ws_svc
 from godsapp.core.scans import ScanRequest, runner
 from godsapp.tools.base import Tool, ToolOption
+from godsapp.ui.header_helpers import open_settings, page_header
 
 
 class ScanView(Gtk.Box):
@@ -25,13 +26,11 @@ class ScanView(Gtk.Box):
         self._parent = parent
         self._tool = tool
 
-        head = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        title = Gtk.Label(label=tool.title or tool.name, xalign=0)
-        title.add_css_class("view-title")
-        sub = Gtk.Label(label=tool.description or "", xalign=0)
-        sub.add_css_class("dim-label"); sub.set_wrap(True)
-        head.append(title); head.append(sub)
-        self.append(head)
+        self.append(page_header(
+            tool.title or tool.name,
+            on_settings=lambda: open_settings(parent),
+            subtitle=tool.description or "",
+        ))
 
         # Form
         form = Gtk.ListBox()
