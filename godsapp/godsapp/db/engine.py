@@ -54,10 +54,40 @@ def get_engine() -> Engine:
 
 
 def init_db() -> None:
-    """Create all tables. Idempotent."""
+    """Create all tables and apply lightweight in-place schema upgrades.
+
+    We use add-if-missing ALTERs instead of a full Alembic migration because
+    SQLite is the default and the user runs this on a single workstation —
+    nobody wants to debug alembic locally on a desktop tool. Idempotent.
+    """
+    from sqlalchemy import inspect, text
     from godsapp.db.models import Base
     engine = get_engine()
     Base.metadata.create_all(engine)
+    _ensure_columns(engine)
+
+
+def _ensure_columns(engine: Engine) -> None:
+    """Add columns that older databases may be missing."""
+    from sqlalchemy import inspect, text
+    insp = inspect(engine)
+    if not insp.has_table("findings"):
+        return
+    existing = {c["name"] for c in insp.get_columns("findings")}
+    additions = [
+        ("status",           "VARCHAR(16) DEFAULT 'open'"),
+        ("cvss_score",       "FLOAT"),
+        ("cve_ids",          "VARCHAR(255)"),
+        ("mitre_technique",  "VARCHAR(64)"),
+        ("tags",             "VARCHAR(255)"),
+    ]
+    with engine.begin() as conn:
+        for col, ddl in additions:
+            if col not in existing:
+                try:
+                    conn.execute(text(f"ALTER TABLE findings ADD COLUMN {col} {ddl}"))
+                except Exception:
+                    pass  # already exists on a race or unsupported dialect
 
 
 @contextmanager

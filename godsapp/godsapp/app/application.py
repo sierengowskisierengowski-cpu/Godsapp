@@ -13,9 +13,12 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 from godsapp import __app_id__, __app_name__, __version__
 from godsapp.core import paths
 from godsapp.core.logging import get_logger, setup_logging
+from godsapp.core.scheduler import scheduler
+from godsapp.core.settings import load_settings
 from godsapp.db import init_db
 from godsapp.tools import registry
 from godsapp.ui.main_window import MainWindow
+from godsapp.ui.views.splash import show_splash
 
 log = get_logger(__name__)
 
@@ -28,6 +31,7 @@ class GodsAppApplication(Adw.Application):
         )
         self.set_resource_base_path(None)
         self._window: MainWindow | None = None
+        self._splash = None
 
     def do_startup(self) -> None:  # type: ignore[override]
         Adw.Application.do_startup(self)
@@ -36,15 +40,44 @@ class GodsAppApplication(Adw.Application):
         setup_logging()
         init_db()
         registry.load_builtin()
-        registry.load_plugins()
+        if load_settings().plugins.auto_load:
+            registry.load_plugins()
 
         self._install_css()
         self._install_actions()
 
+        # Start scheduler in the background if enabled.
+        try:
+            if load_settings().scheduler.enabled:
+                scheduler.start()
+        except Exception:
+            log.exception("scheduler failed to start")
+
     def do_activate(self) -> None:  # type: ignore[override]
-        if self._window is None:
-            self._window = MainWindow(self)
-        self._window.present()
+        if self._window is not None:
+            self._window.present()
+            return
+        try:
+            wants_splash = load_settings().ui.show_splash
+        except Exception:
+            wants_splash = True
+
+        def _show_main() -> None:
+            if self._window is None:
+                self._window = MainWindow(self)
+            self._window.present()
+
+        if wants_splash:
+            self._splash = show_splash(self, on_done=_show_main)
+        else:
+            _show_main()
+
+    def do_shutdown(self) -> None:  # type: ignore[override]
+        try:
+            scheduler.stop()
+        except Exception:
+            pass
+        Adw.Application.do_shutdown(self)
 
     def do_command_line(self, command_line) -> int:  # type: ignore[override]
         self.activate()
@@ -83,8 +116,8 @@ class GodsAppApplication(Adw.Application):
             version=__version__,
             developer_name="Joseph Sierengowski",
             license_type=Gtk.License.GPL_3_0,
-            website="https://github.com/jsierengowski/godsapp",
-            issue_url="https://github.com/jsierengowski/godsapp/issues",
+            website="https://github.com/sierengowskisierengowski-cpu/Godsapp",
+            issue_url="https://github.com/sierengowskisierengowski-cpu/Godsapp/issues",
             copyright="© 2026 Joseph Sierengowski",
             comments="Professional security auditing and research suite.",
         )

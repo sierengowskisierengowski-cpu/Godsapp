@@ -1,8 +1,9 @@
 """Reusable header widgets: page title rows with a settings-cog shortcut.
 
-Every primary view gets a top-right gear that navigates to the master
-Settings view. (Per-category settings sub-pages are queued for the next
-wave — see STATUS.md.)  Author: Joseph Sierengowski.
+Every primary view gets a top-right gear that navigates into the master
+Settings view; views may pass an `anchor` string to land on the relevant
+sub-page (e.g. `"cat:web"` for a tool view, `"reports"` for the Reports view).
+Author: Joseph Sierengowski.
 """
 from __future__ import annotations
 
@@ -23,8 +24,6 @@ def page_header(title: str,
                 *,
                 trailing: Optional[list[Gtk.Widget]] = None,
                 subtitle: Optional[str] = None) -> Gtk.Widget:
-    """A standardised page header: title (matrix-scramble on hover) + optional
-    trailing buttons + a settings cog that jumps to Settings."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
 
     row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
@@ -56,10 +55,18 @@ def page_header(title: str,
     return box
 
 
-def open_settings(parent) -> None:
-    """Helper a view can hand to page_header: navigates the main window to
-    the Settings view. Tolerant to detached/uninitialised parents."""
+def open_settings(parent, anchor: Optional[str] = None) -> None:
+    """Navigate to the Settings view, optionally landing on a sub-page.
+
+    `anchor` is a stable key (`general`, `api`, `threat`, `reports`,
+    `scheduler`, `terminal`, `findings`, `evidence`, `plugins`, or
+    `cat:<category>`). Tolerant to missing methods on `parent`.
+    """
     try:
         parent._on_select("pinned", "settings")  # type: ignore[attr-defined]
+        if anchor:
+            sv = getattr(parent, "_settings_view", None)
+            if sv is not None and hasattr(sv, "goto"):
+                sv.goto(anchor)
     except Exception:
         pass

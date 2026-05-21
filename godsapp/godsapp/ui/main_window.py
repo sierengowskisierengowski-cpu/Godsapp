@@ -11,41 +11,67 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 from godsapp import __app_name__
 from godsapp.core.health import check_health
 from godsapp.core.scans import runner
+from godsapp.core.settings import load_settings
 from godsapp.tools import registry
 from godsapp.ui.sidebar import Sidebar
+from godsapp.ui.views.api_console import ApiConsoleView
 from godsapp.ui.views.dashboard import DashboardView
 from godsapp.ui.views.evidence import EvidenceView
+from godsapp.ui.views.findings import FindingsView
+from godsapp.ui.views.plugins import PluginsView
+from godsapp.ui.views.replay import ReplayView
+from godsapp.ui.views.reports import ReportsView
 from godsapp.ui.views.scan_view import ScanView
+from godsapp.ui.views.scheduler import SchedulerView
 from godsapp.ui.views.settings import SettingsView
+from godsapp.ui.views.terminal import TerminalView
 from godsapp.ui.views.workspaces import WorkspacesView
 
 
 CATEGORY_LABELS: list[tuple[str, str, str]] = [
     # (category-id, title, icon-name)
-    ("recon",       "Reconnaissance",       "network-wired-symbolic"),
-    ("web",         "Web Application",      "applications-internet-symbolic"),
-    ("network",     "Network",              "network-transmit-receive-symbolic"),
-    ("password",    "Password & Hash",      "dialog-password-symbolic"),
-    ("exploit",     "Exploitation",         "weather-storm-symbolic"),
-    ("wireless",    "Wireless",             "network-wireless-symbolic"),
-    ("forensics",   "Forensics",            "drive-harddisk-symbolic"),
-    ("malware",     "Malware Analysis",     "dialog-warning-symbolic"),
-    ("osint",       "OSINT",                "system-search-symbolic"),
-    ("crypto",      "Crypto & Encoding",    "channel-secure-symbolic"),
-    ("mobile",      "Mobile",               "phone-symbolic"),
-    ("cloud",       "Cloud",                "weather-overcast-symbolic"),
+    ("recon",       "Reconnaissance",         "network-wired-symbolic"),
+    ("web",         "Web Application",        "applications-internet-symbolic"),
+    ("vuln",        "Vulnerability Scanner",  "security-high-symbolic"),
+    ("network",     "Network",                "network-transmit-receive-symbolic"),
+    ("password",    "Password & Hash",        "dialog-password-symbolic"),
+    ("exploit",     "Exploitation",           "weather-storm-symbolic"),
+    ("wireless",    "Wireless",               "network-wireless-symbolic"),
+    ("forensics",   "Forensics",              "drive-harddisk-symbolic"),
+    ("malware",     "Malware Analysis",       "dialog-warning-symbolic"),
+    ("osint",       "OSINT",                  "system-search-symbolic"),
+    ("threat",      "Threat Intelligence",    "network-server-symbolic"),
+    ("crypto",      "Crypto & Encoding",      "channel-secure-symbolic"),
+    ("mobile",      "Mobile",                 "phone-symbolic"),
+    ("cloud",       "Cloud",                  "weather-overcast-symbolic"),
 ]
 
 
 _STATE_CLASSES = ("state-idle", "state-running", "state-ok", "state-err")
 
+# Pinned items appear above the tool categories in the sidebar.
+PINNED_ITEMS: list[tuple[str, str, str]] = [
+    ("dashboard",  "Dashboard",       "view-dashboard-symbolic"),
+    ("workspaces", "Workspaces",      "folder-symbolic"),
+    ("findings",   "Findings",        "dialog-warning-symbolic"),
+    ("evidence",   "Evidence Locker", "drive-multidisk-symbolic"),
+    ("reports",    "Reports",         "x-office-document-symbolic"),
+    ("scheduler",  "Scheduler",       "alarm-symbolic"),
+    ("replay",     "Replay Engine",   "media-playback-start-symbolic"),
+    ("plugins",    "Plugins",         "application-x-addon-symbolic"),
+    ("api",        "API Console",     "network-server-symbolic"),
+    ("terminal",   "Terminal",        "utilities-terminal-symbolic"),
+    ("settings",   "Settings",        "preferences-system-symbolic"),
+]
+
 
 class MainWindow(Adw.ApplicationWindow):
     def __init__(self, app: Adw.Application) -> None:
         super().__init__(application=app, title=__app_name__)
-        self.set_default_size(1280, 800)
+        self.set_default_size(1320, 820)
         self.add_css_class("godsapp-window")
         self._set_state("idle")
+        self._auto_fade_source: int | None = None
 
         # Header bar
         header = Adw.HeaderBar()
@@ -64,18 +90,15 @@ class MainWindow(Adw.ApplicationWindow):
         self._health_indicator.set_tooltip_text("Checking…")
         header.pack_end(self._health_indicator)
 
-        # Sidebar
+        # Sidebar — pinned first, then categories
         self._sidebar = Sidebar(self._on_select)
         self._sidebar.set_size_request(260, -1)
 
+        for key, title, icon in PINNED_ITEMS:
+            self._sidebar.add_pinned(key, title, icon)
         for cat_id, title, icon in CATEGORY_LABELS:
             tools_in_cat = registry.by_category().get(cat_id, [])
             self._sidebar.add_section(cat_id, title, icon, tools_in_cat)
-
-        self._sidebar.add_pinned("dashboard",  "Dashboard",       "view-dashboard-symbolic")
-        self._sidebar.add_pinned("workspaces", "Workspaces",      "folder-symbolic")
-        self._sidebar.add_pinned("evidence",   "Evidence Locker", "drive-multidisk-symbolic")
-        self._sidebar.add_pinned("settings",   "Settings",        "preferences-system-symbolic")
 
         # Content stack wrapped in a toast overlay so views can surface toasts
         self._stack = Gtk.Stack()
@@ -87,18 +110,33 @@ class MainWindow(Adw.ApplicationWindow):
         self._toast_overlay = Adw.ToastOverlay()
         self._toast_overlay.set_child(self._stack)
 
+        # Views — instantiate every pinned page and register it
         self._dashboard = DashboardView(self)
         self._workspaces = WorkspacesView(self)
+        self._findings_view = FindingsView(self)
         self._evidence = EvidenceView(self)
+        self._reports_view = ReportsView(self)
+        self._scheduler_view = SchedulerView(self)
+        self._replay_view = ReplayView(self)
+        self._plugins_view = PluginsView(self)
+        self._api_view = ApiConsoleView(self)
+        self._terminal_view = TerminalView(self)
         self._settings_view = SettingsView(self)
-        self._stack.add_named(self._dashboard, "dashboard")
-        self._stack.add_named(self._workspaces, "workspaces")
-        self._stack.add_named(self._evidence, "evidence")
-        self._stack.add_named(self._settings_view, "settings")
+
+        self._stack.add_named(self._dashboard,       "dashboard")
+        self._stack.add_named(self._workspaces,      "workspaces")
+        self._stack.add_named(self._findings_view,   "findings")
+        self._stack.add_named(self._evidence,        "evidence")
+        self._stack.add_named(self._reports_view,    "reports")
+        self._stack.add_named(self._scheduler_view,  "scheduler")
+        self._stack.add_named(self._replay_view,     "replay")
+        self._stack.add_named(self._plugins_view,    "plugins")
+        self._stack.add_named(self._api_view,        "api")
+        self._stack.add_named(self._terminal_view,   "terminal")
+        self._stack.add_named(self._settings_view,   "settings")
 
         self._scan_views: dict[str, ScanView] = {}
 
-        # Split
         split = Adw.NavigationSplitView()
         sidebar_page = Adw.NavigationPage(title="Tools", child=self._sidebar)
         content_page = Adw.NavigationPage(title=__app_name__, child=self._toast_overlay)
@@ -129,10 +167,6 @@ class MainWindow(Adw.ApplicationWindow):
     def _build_title(self) -> Gtk.Widget:
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         box.add_css_class("title-box")
-
-        # Cloud-with-lightning-bolt logo from the packaged SVG resource.
-        # Falls back to the unicode bolt if the resource can't be resolved
-        # (e.g. running from a zipped wheel without extracted assets).
         logo: Gtk.Widget
         try:
             from importlib.resources import files
@@ -144,14 +178,11 @@ class MainWindow(Adw.ApplicationWindow):
             logo = img
         except Exception:
             lbl = Gtk.Label(label="☁⚡")
-            lbl.add_css_class("title-bolt")
-            lbl.add_css_class("bolt-logo")
+            lbl.add_css_class("title-bolt"); lbl.add_css_class("bolt-logo")
             logo = lbl
-
         title = Gtk.Label(label=__app_name__.upper())
         title.add_css_class("title-main")
-        box.append(logo)
-        box.append(title)
+        box.append(logo); box.append(title)
         return box
 
     def _set_state(self, state: str) -> None:
@@ -167,20 +198,54 @@ class MainWindow(Adw.ApplicationWindow):
                 t = (text or "").lower()
                 if "start" in t or "running" in t:
                     self._set_state("running")
+                    self._cancel_auto_fade()
                 elif "complete" in t or "ok" in t or "success" in t or "exit 0" in t:
-                    self._set_state("ok")
+                    self._set_state("ok"); self._schedule_auto_fade()
                 elif "fail" in t or "error" in t:
-                    self._set_state("err")
+                    self._set_state("err"); self._schedule_auto_fade(critical=True)
             elif kind in ("stdout", "stderr"):
-                # any live output means a scan is in flight
                 if "state-running" not in self.get_css_classes():
                     self._set_state("running")
+                    self._cancel_auto_fade()
             return False
         GLib.idle_add(apply)
+
+    def _cancel_auto_fade(self) -> None:
+        if self._auto_fade_source is not None:
+            try:
+                GLib.source_remove(self._auto_fade_source)
+            except Exception:
+                pass
+            self._auto_fade_source = None
+
+    def _schedule_auto_fade(self, *, critical: bool = False) -> None:
+        """Return the border to `state-idle` after the configured delay.
+        For `critical=True` (errors), give the user longer to notice."""
+        self._cancel_auto_fade()
+        try:
+            seconds = max(2, int(load_settings().ui.auto_fade_pulse_seconds))
+        except Exception:
+            seconds = 6
+        if critical:
+            seconds = max(seconds, 12)
+
+        def _fade() -> bool:
+            self._set_state("idle")
+            self._auto_fade_source = None
+            return False
+
+        self._auto_fade_source = GLib.timeout_add_seconds(seconds, _fade)
 
     def _on_close(self, *_a) -> bool:
         try:
             self._scan_unsub()
+        except Exception:
+            pass
+        self._cancel_auto_fade()
+        # Stop background services
+        try:
+            from godsapp.core.scheduler import scheduler
+            scheduler.stop()
         except Exception:
             pass
         return False
@@ -189,12 +254,21 @@ class MainWindow(Adw.ApplicationWindow):
         if kind == "pinned":
             self._stack.set_visible_child_name(payload)
             # Refresh dynamic views on entry so users see live state.
-            if payload == "workspaces":
-                self._workspaces.refresh()
-            elif payload == "evidence":
-                self._evidence.refresh()
-            elif payload == "dashboard":
-                self._dashboard.refresh()
+            handler = {
+                "dashboard":  getattr(self._dashboard,        "refresh", None),
+                "workspaces": getattr(self._workspaces,       "refresh", None),
+                "findings":   getattr(self._findings_view,    "refresh", None),
+                "evidence":   getattr(self._evidence,         "refresh", None),
+                "reports":    getattr(self._reports_view,     "_refresh_past", None),
+                "scheduler":  getattr(self._scheduler_view,   "refresh", None),
+                "replay":     getattr(self._replay_view,      "refresh", None),
+                "plugins":    getattr(self._plugins_view,     "refresh", None),
+            }.get(payload)
+            if callable(handler):
+                try:
+                    handler()
+                except Exception:
+                    pass
             return
         if kind == "tool":
             name = payload
@@ -217,7 +291,6 @@ class MainWindow(Adw.ApplicationWindow):
             self._health_indicator.remove_css_class("ok")
             self._health_indicator.add_css_class("err")
             return True
-
         missing = [t for t, ok in report.tools.items() if not ok]
         tip = [
             f"DB: {'OK' if report.db_ok else 'ERROR'}  ({report.db_url})",

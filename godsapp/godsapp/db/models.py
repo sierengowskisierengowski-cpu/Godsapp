@@ -11,7 +11,9 @@ from typing import Optional
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -95,6 +97,12 @@ class Finding(Base):
     service: Mapped[Optional[str]] = mapped_column(String(64))
     description: Mapped[Optional[str]] = mapped_column(Text)
     data: Mapped[dict] = mapped_column(JSON, default=dict)
+    # Findings Manager fields
+    status: Mapped[str] = mapped_column(String(16), default="open", index=True)
+    cvss_score: Mapped[Optional[float]] = mapped_column(Float)
+    cve_ids: Mapped[Optional[str]] = mapped_column(String(255))
+    mitre_technique: Mapped[Optional[str]] = mapped_column(String(64))
+    tags: Mapped[Optional[str]] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     scan: Mapped[Scan] = relationship(back_populates="findings")
