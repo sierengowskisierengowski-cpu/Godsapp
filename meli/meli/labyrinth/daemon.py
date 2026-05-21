@@ -41,10 +41,19 @@ class LabyrinthDaemon:
         host: str = "0.0.0.0",
         port: int = 2323,
         max_sessions: int = 200,
+        taunt_intensity: str = "full",
     ) -> None:
         self.host = host
         self.port = port
         self.max_sessions = max(1, int(max_sessions))
+        # Normalise: anything unrecognised falls back to "full" since
+        # that's the design default (HA HA gotcha personality). Log a
+        # warning so operators editing config.toml notice their typo.
+        if taunt_intensity not in ("off", "subtle", "full"):
+            log.warning("Labyrinth taunt_intensity unrecognised, defaulting to 'full'",
+                        provided=taunt_intensity)
+            taunt_intensity = "full"
+        self.taunt_intensity = taunt_intensity
 
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
@@ -188,12 +197,14 @@ class LabyrinthDaemon:
                 pass
             return
 
+        from meli.labyrinth.taunts import TauntEngine
         session = LabyrinthSession(
             session_id=sink.new_session_id(),
             peer_ip=peer_ip,
             peer_port=peer_port,
             reader=reader,
             writer=writer,
+            taunts=TauntEngine(intensity=self.taunt_intensity),
         )
         task = asyncio.current_task()
         with self._sessions_lock:

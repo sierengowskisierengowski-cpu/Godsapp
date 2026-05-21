@@ -129,6 +129,7 @@ class MeliApplication(Adw.Application):
                 host=cfg.get("labyrinth", "bind_host", default="0.0.0.0"),
                 port=int(cfg.get("labyrinth", "bind_port", default=2323)),
                 max_sessions=int(cfg.get("labyrinth", "max_sessions", default=200)),
+                taunt_intensity=str(cfg.get("labyrinth", "taunt_intensity", default="full")),
             )
             ok = self._labyrinth.start()
             if ok:

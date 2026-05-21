@@ -14,6 +14,7 @@ attackers are trying.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import shlex
 import time
 from dataclasses import dataclass, field
@@ -22,6 +23,7 @@ import structlog
 
 from meli.labyrinth.commands import COMMANDS, unknown_response
 from meli.labyrinth.filesystem import FakeFS, new_session_seed
+from meli.labyrinth.taunts import TauntEngine
 from meli.labyrinth import sink
 
 log = structlog.get_logger()
@@ -61,6 +63,7 @@ class LabyrinthSession:
     requested_exit: bool = False
     start_ts: float = field(default_factory=time.monotonic)
     fs: FakeFS = field(default_factory=lambda: FakeFS(session_seed=new_session_seed()))
+    taunts: TauntEngine = field(default_factory=TauntEngine)
 
     # ---- IO primitives ------------------------------------------------
 
@@ -157,9 +160,31 @@ class LabyrinthSession:
             await self._negotiate_telnet()
             if not await self._fake_login():
                 return
-            await self._command_loop()
+            # Pre-roll the on_login banner ~30s into the session as a
+            # background task so the attacker has time to start poking
+            # around before the reveal lands. The task is awaited at
+            # session teardown so it doesn't leak past disconnect.
+            login_taunt_task = asyncio.create_task(self._delayed_login_taunt())
+            try:
+                await self._command_loop()
+            finally:
+                login_taunt_task.cancel()
+                # Await the cancellation so the task isn't left in a
+                # pending state — otherwise asyncio logs a "Task was
+                # destroyed but it is pending" warning and we could
+                # race the exit-banner send below.
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await login_taunt_task
         finally:
             duration = time.monotonic() - self.start_ts
+            # Closing reveal, best-effort — send before the socket dies
+            # so the attacker (and any tail -f'ing their own log) sees it.
+            try:
+                exit_banner = self.taunts.on_exit(duration, len(self.command_history))
+                if exit_banner is not None:
+                    await self.send(exit_banner)
+            except Exception:
+                pass
             sink.emit_disconnect(
                 self.session_id, self.peer_ip, duration, len(self.command_history)
             )
@@ -168,6 +193,18 @@ class LabyrinthSession:
                 await self.writer.wait_closed()
             except Exception:
                 pass
+
+    async def _delayed_login_taunt(self) -> None:
+        """Wait ~30s, then drop the on_login banner. Cancellable."""
+        try:
+            await asyncio.sleep(30.0)
+            banner = self.taunts.on_login()
+            if banner is not None:
+                await self.send(banner)
+        except asyncio.CancelledError:
+            return
+        except Exception:
+            return
 
     async def _negotiate_telnet(self) -> None:
         # Tell the client: we'll handle echo, suppress go-ahead. Tell
@@ -230,6 +267,14 @@ class LabyrinthSession:
             self.command_history.append(line)
             sink.emit_command(self.session_id, self.peer_ip, line)
             await self._dispatch(line)
+            # Tripwire check — after the command runs so the attacker
+            # sees the real-looking output first, then the reveal.
+            try:
+                tripwire = self.taunts.on_command(line)
+                if tripwire is not None:
+                    await self.send(tripwire)
+            except Exception:
+                pass
 
     async def _dispatch(self, line: str) -> None:
         # Split on shell-like whitespace, tolerate quoting errors

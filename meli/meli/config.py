@@ -141,6 +141,11 @@ DEFAULTS: dict[str, Any] = {
         "bind_host": "0.0.0.0",
         "bind_port": 2323,
         "max_sessions": 200,
+        # Taunt personality: "off" / "subtle" / "full".
+        # full = HA HA gotcha banners on login + tripwires + exit (default).
+        # subtle = only on disconnect + destructive-command tripwires.
+        # off = silent tarpit, looks like a real (slow) box.
+        "taunt_intensity": "full",
     },
 }
 
