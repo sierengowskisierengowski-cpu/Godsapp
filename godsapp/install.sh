@@ -120,10 +120,36 @@ cp "${SRC_DIR}/README.md" "${APP_DIR}/README.md" 2>/dev/null || true
 # 3. Build venv with system GTK access AND install the package into it
 echo "==> Creating venv (with system site-packages for PyGObject)"
 "$PYTHON" -m venv --system-site-packages "${VENV}"
-"${VENV}/bin/pip" install --upgrade pip wheel
-echo "==> Installing godsapp into the venv (force-reinstall so upgrades always replace old code)"
-"${VENV}/bin/pip" install --force-reinstall --no-deps "${APP_DIR}"
-"${VENV}/bin/pip" install "${APP_DIR}"
+"${VENV}/bin/pip" install --upgrade pip wheel setuptools
+echo "==> Uninstalling any prior godsapp wheel from the venv (clean slate)"
+"${VENV}/bin/pip" uninstall -y godsapp 2>/dev/null || true
+echo "==> Installing godsapp into the venv"
+"${VENV}/bin/pip" install --force-reinstall --no-deps --no-cache-dir "${APP_DIR}"
+"${VENV}/bin/pip" install --no-cache-dir "${APP_DIR}"
+
+# 3a. VERIFY the non-Python resources (CSS, SVG) actually landed in the wheel.
+# If package-data isn't being shipped properly the in-app theme silently
+# falls back to default Adwaita — looks broken without any error message.
+SITE_PKG="$("${VENV}/bin/python" -c 'import godsapp, os; print(os.path.dirname(godsapp.__file__))')"
+echo "==> Installed package dir: ${SITE_PKG}"
+MISSING_RES=0
+for res in resources/css/style.css resources/icons/godsapp-logo.svg; do
+    if [[ -f "${SITE_PKG}/${res}" ]]; then
+        echo "    ✓ ${res}"
+    else
+        echo "    ✗ MISSING: ${res}"
+        MISSING_RES=1
+    fi
+done
+if [[ ${MISSING_RES} -eq 1 ]]; then
+    echo "==> package-data missing — copying resources directly into ${SITE_PKG}"
+    cp -r "${APP_DIR}/godsapp/resources/"* "${SITE_PKG}/resources/" 2>/dev/null || \
+        cp -r "${APP_DIR}/godsapp/resources" "${SITE_PKG}/"
+fi
+# Always also nuke stale bytecode so an older cached CSS path isn't replayed
+find "${SITE_PKG}" -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+INSTALLED_VERSION="$("${VENV}/bin/python" -c 'import godsapp; print(godsapp.__version__)')"
+echo "==> Installed version: ${INSTALLED_VERSION}"
 
 # 4. Launcher scripts (so users never need PYTHONPATH)
 mkdir -p "$(dirname "${BIN}")"

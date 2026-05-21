@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "godsapp"
-version = "0.3.2"
+version = "0.3.3"
 description = "GodsApp — Professional security auditing and research suite (native GTK4 Linux desktop application)"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }
@@ -51,9 +51,18 @@ godsapp-cli = "godsapp.cli.main:cli"
 [project.urls]
 Homepage = "https://github.com/jsierengowski/godsapp"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["godsapp*"]
 
 [tool.setuptools.package-data]
-godsapp = ["resources/**/*"]
+"godsapp" = [
+    "resources/*",
+    "resources/css/*.css",
+    "resources/icons/*.svg",
+    "resources/icons/*.png",
+    "resources/**/*",
+]

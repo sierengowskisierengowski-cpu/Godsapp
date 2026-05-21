@@ -1,0 +1,4 @@
+graft godsapp/resources
+recursive-include godsapp/resources *.css *.svg *.png *.ico *.txt
+include README.md
+include LICENSE
