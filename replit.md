@@ -75,7 +75,19 @@ The only other thing in the workspace is `artifacts/mockup-sandbox/` — Replit 
 - The systemd user unit needs `Environment=PYTHONPATH=/opt/godsapp/app` if the launcher is bypassed; the bundled launcher (`/usr/local/bin/godsapp`) calls the venv binary directly, so PYTHONPATH is only used as a belt-and-suspenders.
 - On Debian/Ubuntu, `gir1.2-adw-1` is sometimes named `gir1.2-libadwaita-1` on older releases; the installer surfaces a clear error if it can't import `Adw`.
 
-## Status — v0.4.0 (latest)
+## Status — v0.4.1 (latest)
+
+**Polish pass: terminal + storm.**
+
+- **Terminal**: always-visible header toggle button (⚡ + `utilities-terminal-symbolic`), occupies the full workspace area (moved into the content pane's `Gtk.Overlay` so it spans everything below the header and to the right of the sidebar, resizing dynamically), pinned ASCII header + status line, persistent shell session on hide, one-click VTE install via `pkexec` with per-distro package detection (Arch / Fedora / Debian / openSUSE / Void).
+- **Storm audio**: `core/audio.play_async(name, volume=…)` now passes backend-native volume flags (`paplay --volume`, `pw-play --volume`, `ffplay -volume`, `mpv --volume`). Close strikes pull from `thunder_strike|crackle|close.wav` at the strike-volume slider; distant strikes pull from `thunder_distant|rumble|rolling.wav` at the rumble-volume slider. Frame-accurate audio↔visual sync — the sound fires the same monotonic tick the bolt is born. Per-strike ±10% jitter so it never repeats. Silent when slider × preset multiplier ≤ 0.005.
+- **Storm visuals**: 5-layer composite with razor-thin sub-pixel core for close strikes, 3-layer paler/narrower for distant; brief retinal-burn afterglow after each bolt dies. Close vs distant variation — ~80% distant (upper-third, soft top-down sky glow) / 20% close (full window, warm white veil flash 30–65% inten · 320 ms). Auto-pauses during scans (configurable).
+- **Settings → General**: new dropdowns/sliders for Storm preset (Whisper/Drizzle/Standard/Heavy), Strike frequency (Sparse/Moderate/Frequent), Strike volume, Rumble volume, Distance variation toggle, Auto-pause-during-scans toggle, and a Terminal `auto_install_vte` toggle.
+- `LightningOverlay` polls settings every 10s so changes take effect live without restarting.
+
+Tarballs: `./dist/godsapp-0.4.1.tar.gz` and `./dist/godsapp-0.4.1.zip`.
+
+## Status — v0.4.0
 
 **Five-feature push: discoverability + accuracy.**
 

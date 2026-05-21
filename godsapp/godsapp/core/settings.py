@@ -48,6 +48,20 @@ class UISettings(BaseModel):
     show_splash: bool = True
     sounds_enabled: bool = True
     background_storm: bool = True
+    # ── storm tuning (v0.4.1 polish pass) ──
+    # Volumes are 0–100 ints; audio backend translates to backend-native units.
+    storm_strike_volume: int = 35       # sharp electrical crack on a bolt strike
+    storm_rumble_volume: int = 18       # ambient rolling rumble between strikes
+    # frequency: sparse=60–110s · moderate=15–40s · frequent=6–18s
+    storm_frequency: str = "moderate"
+    # close/distant intensity variation — when true, ~80% of strikes are
+    # distant (small + faint glow) and ~20% are close (large + sharp + flash)
+    storm_distance_variation: bool = True
+    # preset: whisper=very faint · drizzle=light · standard=default · heavy=loud
+    storm_preset: str = "standard"
+    # pause the storm renderer + audio while any scan is running so heavy
+    # work isn't competing with the visual fx for the GPU
+    storm_pause_during_scans: bool = True
 
 
 class DatabaseSettings(BaseModel):
@@ -73,6 +87,8 @@ class ReportsSettings(BaseModel):
 
 
 class TerminalSettings(BaseModel):
+    auto_install_vte: bool = True
+
     shell: str = ""           # blank → $SHELL or /bin/bash
     font: str = "Monospace 11"
     scrollback_lines: int = 50000

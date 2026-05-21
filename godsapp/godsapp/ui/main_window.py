@@ -84,6 +84,12 @@ class MainWindow(Adw.ApplicationWindow):
         self._search_trigger = self._build_search_trigger()
         header.pack_start(self._search_trigger)
 
+        # Always-visible terminal toggle button — lightning + console glyph.
+        # Lives in the header so users can summon/dismiss the embedded shell
+        # at any time without remembering the double-click shortcut.
+        self._terminal_btn = self._build_terminal_toggle()
+        header.pack_start(self._terminal_btn)
+
         menu_btn = Gtk.MenuButton()
         menu_btn.set_icon_name("open-menu-symbolic")
         menu = Gio.Menu()
@@ -144,9 +150,19 @@ class MainWindow(Adw.ApplicationWindow):
         self._scan_views: dict[str, ScanView] = {}
 
         # ── split + status bar ────────────────────────────────────────────
+        # The terminal overlay slides down INSIDE the content pane (below the
+        # header, to the right of the sidebar), so it occupies the full
+        # workspace area and resizes with the window automatically. Pinned
+        # ASCII header + status line sit at the top of the overlay; the VTE
+        # flexes to fill the rest.
+        self._content_overlay = Gtk.Overlay()
+        self._content_overlay.set_child(self._toast_overlay)
+        self._terminal_overlay = TerminalOverlay(self)
+        self._content_overlay.add_overlay(self._terminal_overlay)
+
         split = Adw.NavigationSplitView()
         sidebar_page = Adw.NavigationPage(title="Tools", child=self._sidebar)
-        content_page = Adw.NavigationPage(title=__app_name__, child=self._toast_overlay)
+        content_page = Adw.NavigationPage(title=__app_name__, child=self._content_overlay)
         split.set_sidebar(sidebar_page)
         split.set_content(content_page)
 
@@ -161,21 +177,15 @@ class MainWindow(Adw.ApplicationWindow):
         toolbar_view.add_top_bar(header)
         toolbar_view.set_content(body)
 
-        # Live background lightning storm + slide-down terminal overlay.
-        # The storm is a transparent click-through Cairo layer; the
-        # terminal is a Gtk.Revealer that drops down from the top when
-        # the user double-clicks the GodsApp title in the header bar.
-        # Z-order, bottom → top:
-        #   storm (background lightning)
-        #   toolbar_view (header + body, panels are translucent so storm shows through)
-        #   terminal_overlay (slides down over everything when summoned)
+        # Live background lightning storm — transparent click-through layer
+        # behind the entire UI. Terminal overlay was already attached inside
+        # the content pane above so it correctly sits below the header and
+        # to the right of the sidebar.
         root_overlay = Gtk.Overlay()
         self._storm = LightningOverlay()
         root_overlay.set_child(self._storm)
         toolbar_view.set_hexpand(True); toolbar_view.set_vexpand(True)
         root_overlay.add_overlay(toolbar_view)
-        self._terminal_overlay = TerminalOverlay(self)
-        root_overlay.add_overlay(self._terminal_overlay)
         self.set_content(root_overlay)
 
         # Health refresh
@@ -307,6 +317,41 @@ class MainWindow(Adw.ApplicationWindow):
         box.append(logo); box.append(text)
         return box
 
+    def _build_terminal_toggle(self) -> Gtk.Widget:
+        btn = Gtk.ToggleButton()
+        btn.add_css_class("header-terminal-btn")
+        btn.add_css_class("flat")
+        btn.set_tooltip_text("Toggle embedded terminal  (or double-click the title)")
+        inner = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        bolt = Gtk.Label(label="⚡"); bolt.add_css_class("term-btn-bolt")
+        icon = Gtk.Image.new_from_icon_name("utilities-terminal-symbolic")
+        inner.append(bolt); inner.append(icon)
+        btn.set_child(inner)
+        # Use 'toggled' so the button's pressed state tracks the actual
+        # terminal visibility (e.g. when toggled via title double-click).
+        self._terminal_btn_handler = None
+        def _on_toggled(b):
+            try:
+                if b.get_active() and not self._terminal_overlay.get_reveal_child():
+                    self._terminal_overlay.show_terminal()
+                elif not b.get_active() and self._terminal_overlay.get_reveal_child():
+                    self._terminal_overlay.hide_terminal()
+            except Exception:
+                pass
+        self._terminal_btn_handler = btn.connect("toggled", _on_toggled)
+        return btn
+
+    def _sync_terminal_btn(self, visible: bool) -> None:
+        """Keep the header toggle button state in sync with the overlay."""
+        try:
+            if self._terminal_btn.get_active() != visible:
+                # Block our own handler so we don't recurse into show/hide.
+                self._terminal_btn.handler_block(self._terminal_btn_handler)
+                self._terminal_btn.set_active(visible)
+                self._terminal_btn.handler_unblock(self._terminal_btn_handler)
+        except Exception:
+            pass
+
     def _build_search_trigger(self) -> Gtk.Widget:
         btn = Gtk.Button()
         btn.add_css_class("header-search-btn")
@@ -371,13 +416,23 @@ class MainWindow(Adw.ApplicationWindow):
                 if "start" in t or "running" in t:
                     self._set_state("running"); self._cancel_auto_fade()
                     self._set_status_text("scan running…")
+                    try: self._storm.pause_for_scan()
+                    except Exception: pass
                 elif "complete" in t or "ok" in t or "success" in t or "exit 0" in t:
                     self._set_state("ok"); self._schedule_auto_fade()
                     self._set_status_text("scan complete")
+                    try: self._storm.resume_after_scan()
+                    except Exception: pass
                 elif "fail" in t or "error" in t:
                     self._set_state("err"); self._schedule_auto_fade(critical=True)
                     self._set_status_text(f"scan failed: {text}")
+                    try: self._storm.resume_after_scan()
+                    except Exception: pass
             elif kind in ("stdout", "stderr"):
+                # Visual state only — DO NOT inc/dec the storm pause counter
+                # here; pairing is owned exclusively by status start/complete
+                # events so the counter can't drift if stdout arrives before
+                # or after the status event.
                 if "state-running" not in self.get_css_classes():
                     self._set_state("running"); self._cancel_auto_fade()
             return False

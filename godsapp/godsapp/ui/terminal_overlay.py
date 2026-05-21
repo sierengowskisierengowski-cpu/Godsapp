@@ -85,6 +85,33 @@ def _rgba(*c) -> Gdk.RGBA:
     return r
 
 
+def _detect_distro_install_cmd() -> tuple[str, str, str]:
+    """Return (distro_label, pkg_install_cmd, short_label) by parsing
+    /etc/os-release. Falls back to ("unknown", "", "")."""
+    try:
+        info: dict[str, str] = {}
+        with open("/etc/os-release", encoding="utf-8") as f:
+            for line in f:
+                if "=" in line:
+                    k, v = line.strip().split("=", 1)
+                    info[k] = v.strip().strip('"')
+        ids = (info.get("ID", "") + " " + info.get("ID_LIKE", "")).lower()
+        name = info.get("PRETTY_NAME") or info.get("NAME") or "Linux"
+        if any(x in ids for x in ("arch", "cachyos", "manjaro", "endeavouros")):
+            return name, "pacman -S --noconfirm vte4 vte-common", "pacman"
+        if "fedora" in ids or "rhel" in ids or "centos" in ids:
+            return name, "dnf install -y vte291-gtk4", "dnf"
+        if any(x in ids for x in ("debian", "ubuntu", "pop", "mint", "elementary")):
+            return name, "apt-get install -y gir1.2-vte-3.91", "apt"
+        if "opensuse" in ids or "suse" in ids:
+            return name, "zypper install -y vte-tools typelib-1_0-Vte-3.91", "zypper"
+        if "void" in ids:
+            return name, "xbps-install -Sy vte3", "xbps"
+        return name, "", ""
+    except Exception:
+        return "unknown", "", ""
+
+
 class TerminalOverlay(Gtk.Revealer):
     """Slide-down terminal overlay. Held by MainWindow; toggled by double-click."""
 
@@ -96,12 +123,16 @@ class TerminalOverlay(Gtk.Revealer):
         self.set_transition_type(Gtk.RevealerTransitionType.SLIDE_DOWN)
         self.set_transition_duration(self.SLIDE_MS)
         self.set_reveal_child(False)
+        # FILL on both axes — the terminal lives inside the content overlay
+        # (sibling of the page stack), so it grows with the workspace area
+        # automatically when the window resizes.
         self.set_halign(Gtk.Align.FILL)
-        self.set_valign(Gtk.Align.START)
-        self.set_hexpand(True); self.set_vexpand(False)
+        self.set_valign(Gtk.Align.FILL)
+        self.set_hexpand(True); self.set_vexpand(True)
         self.add_css_class("terminal-overlay")
 
-        # Container
+        # Container — vertical box: pinned ASCII header + pinned status line
+        # + VTE that flexes to fill the rest.
         self._box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self._box.set_hexpand(True); self._box.set_vexpand(True)
         self._box.add_css_class("terminal-overlay-body")
@@ -125,10 +156,9 @@ class TerminalOverlay(Gtk.Revealer):
         self._term_scroll.add_css_class("terminal-screen")
         self._box.append(self._term_scroll)
 
-        # Size: take 78% of the window height when revealed
+        # No more manual sizing — the revealer's FILL alignment + its parent
+        # Gtk.Overlay (inside the content pane, see MainWindow) does it.
         self.set_child(self._box)
-        self._main.connect("notify::default-height", lambda *_: self._resize_to_window())
-        self._main.connect("realize", lambda *_: self._resize_to_window())
 
         # Live tickers (status line: 1s; ascii pulse handled by CSS)
         self._status_tick_id = 0
@@ -167,14 +197,7 @@ class TerminalOverlay(Gtk.Revealer):
 
         return wrap
 
-    # ── sizing ──────────────────────────────────────────────────────────
-    def _resize_to_window(self) -> None:
-        h = self._main.get_height() or self._main.get_default_size()[1]
-        if h and h > 200:
-            # Headerbar is ~46px; take everything below.
-            self._box.set_size_request(-1, int(h - 60))
-
-    # ── public toggle (called from MainWindow double-click) ─────────────
+    # ── public toggle ───────────────────────────────────────────────────
     def toggle(self) -> None:
         if self.get_reveal_child():
             self.hide_terminal()
@@ -182,11 +205,17 @@ class TerminalOverlay(Gtk.Revealer):
             self.show_terminal()
 
     def show_terminal(self) -> None:
+        # Lazy-spawn the shell on first reveal. Hiding the terminal does NOT
+        # kill it — the VTE keeps its PTY + scrollback + running processes
+        # alive, so the next show_terminal restores the exact same session.
         if not self._spawned:
             self._spawn()
             self._spawned = True
-        self._resize_to_window()
         self.set_reveal_child(True)
+        # Keep the header toggle button in sync whether we got here via the
+        # button, the title double-click, or the /terminal slash command.
+        try: self._main._sync_terminal_btn(True)
+        except Exception: pass
         # WOW: trigger storm + state-running window pulse + grab focus
         try:
             if getattr(self._main, "_storm", None) is not None:
@@ -214,6 +243,8 @@ class TerminalOverlay(Gtk.Revealer):
 
     def hide_terminal(self) -> None:
         self.set_reveal_child(False)
+        try: self._main._sync_terminal_btn(False)
+        except Exception: pass
         if self._status_tick_id:
             try:
                 GLib.source_remove(self._status_tick_id)
@@ -290,14 +321,59 @@ class TerminalOverlay(Gtk.Revealer):
 
     def _fallback_widget(self) -> Gtk.Widget:
         warn = Adw.PreferencesGroup(title="Embedded terminal unavailable")
+        distro, pkg_cmd, label = _detect_distro_install_cmd()
         row = Adw.ActionRow(
             title="libvte 3.91 / 2.91 is not installed",
-            subtitle=("Install the system package and restart GodsApp:\n"
-                      "  • Arch:    sudo pacman -S vte4 vte-common\n"
-                      "  • Fedora:  sudo dnf install vte291-gtk4\n"
-                      "  • Debian:  sudo apt install gir1.2-vte-3.91"),
+            subtitle=(f"Detected distro: {distro}\nInstall command: {pkg_cmd or 'unknown'}"),
         )
         warn.add(row)
+
+        # One-click install when settings allow and we know the distro
+        try:
+            allow_auto = bool(load_settings().terminal.auto_install_vte)
+        except Exception:
+            allow_auto = True
+        import shutil as _sh
+        have_pkexec = _sh.which("pkexec") is not None
+        if allow_auto and pkg_cmd and have_pkexec:
+            btn = Gtk.Button(label=f"Install via pkexec  ({label})")
+            btn.add_css_class("suggested-action")
+            btn.set_margin_start(12); btn.set_margin_end(12); btn.set_margin_top(8)
+            def _do_install(*_):
+                btn.set_sensitive(False); btn.set_label("installing…")
+                try:
+                    import subprocess
+                    proc = subprocess.Popen(
+                        ["pkexec", "sh", "-c", pkg_cmd],
+                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        start_new_session=True,
+                    )
+                    def _watch():
+                        rc = proc.poll()
+                        if rc is None:
+                            return True
+                        btn.set_label(
+                            "installed — restart GodsApp" if rc == 0
+                            else f"install failed (exit {rc}) — see terminal"
+                        )
+                        btn.set_sensitive(False)
+                        return False
+                    GLib.timeout_add(500, _watch)
+                except Exception as e:
+                    btn.set_label(f"install failed: {e}")
+                    btn.set_sensitive(False)
+            btn.connect("clicked", _do_install)
+            row2 = Adw.ActionRow(title="One-click install",
+                                 subtitle="Runs the install command above with elevated privileges.")
+            row2.add_suffix(btn)
+            warn.add(row2)
+        elif allow_auto and pkg_cmd and not have_pkexec:
+            note = Adw.ActionRow(
+                title="One-click install unavailable",
+                subtitle="pkexec is not installed. Copy the install command above into a terminal and restart GodsApp.",
+            )
+            warn.add(note)
+
         page = Adw.PreferencesPage(); page.add(warn)
         return page
 

@@ -1,0 +1,54 @@
+GodsApp v0.4.0 — polish items found during user audit
+First, hell of a build. The splash screen, the guided onboarding, the embedded terminal ASCII header with status line, the matrix scramble, the per-category settings, the lightning storm — all hitting. Real momentum.
+Found some items during use that need polish. Please address in the next patch:
+Embedded Terminal
+The ASCII header and status line look exactly right. The blur backdrop is on-brand. But there are functional gaps:
+
+No visible toggle/slide button to hide or open the terminal. Right now I can't find a way to slide it back up once it's open, or open it on demand. There needs to be a clearly visible button in the top bar (lightning-bolt + console icon, same place we discussed) that:
+
+Toggles the terminal open/closed
+Animates the slide-down on open and slide-up on close (350ms ease-in-out)
+Stays visible AT ALL TIMES so users can always recall the terminal
+
+
+The terminal does not fill the full workspace area. Right now it's a smaller pane in the middle of the workspace. It should:
+
+Occupy the FULL width of the workspace area (everything below the top bar, minus the left sidebar)
+Resize dynamically when the app window resizes — when the GodsApp window grows or shrinks, the terminal pane must grow/shrink with it
+Keep the ASCII header and status line pinned at the top, with the actual VTE terminal pane filling the remaining vertical space below
+On a 4K display in fullscreen, the terminal should be giant — not a fixed 800x600 box centered in space
+
+
+The frosted blur of the underlying view should remain behind the terminal so users can see the shapes of what's underneath but text remains crisp. Current build seems to have the blur right — just make sure it scales with the new full-width terminal.
+Persistent session. Hiding the terminal must NOT kill the shell. Anything running (long scans, tails, ssh sessions) must keep running in the background. Bringing the terminal back down restores the same session, same scrollback, same running processes.
+Library install gap. Right now the terminal pane shows "libvte 3.91 / 2.91 is not installed" with install instructions. That's HONEST and good — but consider adding a one-click "Install now" button on Arch/Debian/Fedora that runs the appropriate command for the user's detected distro. Users shouldn't have to copy-paste shell commands when GodsApp could just do it.
+
+Lightning Storm — Audio
+The lightning storm visuals and audio are great in concept but the audio currently is too loud and the rumbles need a different character. Adjust:
+
+Make rumbles deeper and more "cinematic" — think distant rolling thunder, the kind you hear from miles away on a humid summer night. Less treble, more low-frequency body. Should sit in the bottom of the mix.
+Lower the default volume significantly. Default should be very faint, almost subliminal — present in the background but never demanding attention. The user should be able to forget it's there until a strike happens.
+Lightning strikes should be cleaner and sharper. When a bolt visually strikes on screen, the audio should be a quick crisp electrical "crack" followed by the deep rumble fading away over 1-2 seconds. Currently strikes feel muddled or generic.
+The strike should sync to the visual — when a lightning bolt visually appears on screen, the audio crack should hit at the same moment, not before or after. Frame-accurate sync.
+Variation in strike intensity. Not every strike should sound the same — vary distance (close strikes = louder + sharper, distant strikes = softer + more rumble). Add a touch of randomness so it doesn't feel mechanical.
+Settings exposure — in Settings → General, add granular controls:
+
+Strike volume (slider 0-100)
+Rumble volume (slider 0-100)
+Strike frequency (sparse / moderate / frequent)
+Strike distance variation (toggle — adds the "close vs distant" variation)
+Optional "thunderstorm intensity" preset dropdown (Whisper / Drizzle / Standard / Heavy Storm)
+
+
+
+Lightning Storm — Visuals
+The current visual lightning is good but a small refinement:
+
+Strikes should look more like real photographed lightning — fractal branching, sharp edges, brief afterglow on retina, momentary scene illumination. Current strikes have the right shape but feel a touch animated/cartoony. Reference real high-speed photography of lightning.
+Background flash — when a strike happens, the entire background should briefly brighten (very subtly, ~10% luminance increase for ~100ms) like real lightning illuminates a dark scene. Not bright enough to disrupt reading, but enough to feel atmospheric.
+Strike depth — alternate between close strikes (large, sharp, with full screen flash) and distant strikes (small, faint, just a glow on the horizon). 80/20 ratio in favor of distant.
+Performance — make sure the lightning storm doesn't tax the GPU during heavy work. Should run smoothly even with multiple scans active. Add an "auto-pause during scans" toggle in case users want to.
+
+Summary
+This isn't a complaint — the build is great. These are polish items to take it from "really cool" to "this is a flagship product." The terminal needs to be properly toggleable and full-size, and the storm audio needs to be more atmospheric and less obtrusive. Once those land, this is genuinely shippable.
+Author throughout: Joseph Sierengowski.

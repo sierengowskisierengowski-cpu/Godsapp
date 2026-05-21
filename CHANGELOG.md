@@ -2,6 +2,33 @@
 
 All notable changes to GodsApp.
 
+## [0.4.1] — 2026-05-21
+
+### Polish pass — terminal + storm tuning
+
+**Terminal**
+- Always-visible toggle button (⚡ + console icon) added to the header bar; double-click on the title still works as the secondary shortcut.
+- Terminal overlay was moved INSIDE the content pane — now occupies the full workspace width and height (everything below the header, to the right of the sidebar) and resizes dynamically with the window. No more fixed-pixel sizing hacks.
+- Pinned ASCII header + status line stay anchored at the top; the VTE flexes to fill the rest.
+- Hiding the terminal preserves the live shell session (PTY, scrollback, running processes) — re-opening restores the exact same state.
+- One-click VTE install when libvte is missing: detects the distro from `/etc/os-release` (Arch/CachyOS/Manjaro, Fedora/RHEL, Debian/Ubuntu/Pop, openSUSE, Void) and runs the right package command via `pkexec`. Gated behind `terminal.auto_install_vte` (on by default).
+
+**Storm audio**
+- New per-event `volume` argument flowing through `paplay --volume`, `pw-play --volume`, `ffplay -volume`, and `mpv --volume`. No more all-or-nothing playback.
+- Settings → General now exposes: **Storm preset** (Whisper / Drizzle / Standard / Heavy), **Strike frequency** (Sparse / Moderate / Frequent), **Strike volume** (0–100, default 35), **Rumble volume** (0–100, default 18), **Vary strike distance**, **Auto-pause during scans**.
+- Close strikes draw from `thunder_strike.wav` / `thunder_crackle.wav` / `thunder_close.wav`; distant strikes draw from `thunder_distant.wav` / `thunder_rumble.wav` / `thunder_rolling.wav`. Per-strike random ±10% volume jitter so it never sounds mechanical.
+- Audio fires on the **same monotonic tick** the visual bolt is born — frame-accurate sync, no more drift between the flash and the crack.
+
+**Storm visuals**
+- Sharper electrical core (5-layer composite with a sub-pixel razor on close strikes), brief retinal-burn afterglow after each bolt dies.
+- Close vs distant strike depth — when "Vary distance" is on, ~80% of strikes are short, faint, horizon-bound bolts in the upper third of the window with only a soft top-down sky glow; the remaining 20% are full-window cracks with the assertive white flash veil.
+- Scene-illumination flash split into two flavours: warm white for close (~30–65% inten · 320 ms), cool blue horizon-only gradient for distant (~8–18% inten · 550 ms).
+- Storm auto-pauses while any scan is running (`scan_pause_during_scans` setting) so the GPU is free for the work. Resumes on scan complete/fail.
+
+**Internal**
+- `LightningOverlay` now polls settings every 10 s so toggling in the UI takes effect live without a restart.
+- `play_async()` no-ops cleanly when `volume <= 0.005` so a 0-volume preset really is silent.
+
 ## [0.2.0] — 2026-05-21
 
 ### Added — Tool categories
