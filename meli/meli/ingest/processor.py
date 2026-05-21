@@ -119,6 +119,18 @@ def process_event(raw: dict, source: str = "mqtt") -> None:
         # Publish to processed MQTT topic
         _publish_processed(normalized)
 
+        # In-process signal so the dashboard pot pulses in real time.
+        # Subscribers re-dispatch to the GTK main loop themselves.
+        try:
+            from meli import event_bus
+            event_bus.publish("event.ingested", {
+                "severity": severity,
+                "source_ip": ip,
+                "honeypot_service": normalized.get("honeypot_service", "unknown"),
+            })
+        except Exception:
+            pass
+
         log.debug("Event processed", ip=ip, severity=severity, source=source)
 
     except Exception as e:

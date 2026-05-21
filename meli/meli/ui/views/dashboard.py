@@ -1,4 +1,5 @@
-"""Dashboard view — home screen with stat cards, live feed, and charts."""
+"""Dashboard view — home screen with the centerpiece honey pot, stat
+cards, live feed, and charts."""
 from __future__ import annotations
 
 import gi
@@ -12,6 +13,9 @@ import structlog
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, and_
 
+from meli import event_bus
+from meli.ui.widgets import HoneyPotWidget
+
 log = structlog.get_logger()
 
 
@@ -19,9 +23,29 @@ class DashboardView(Gtk.Box):
     def __init__(self) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._refresh_id: int | None = None
+        self._honey_pot: HoneyPotWidget | None = None
         self._build_ui()
         self.refresh()
         self._start_auto_refresh()
+        # Live-pulse the pot whenever the ingest pipeline reports a new event.
+        # Handler is called on the publisher's thread (often the MQTT thread),
+        # so we re-dispatch onto the GTK main loop.
+        event_bus.subscribe("event.ingested", self._on_ingest_signal)
+        self.connect("destroy", self._on_destroy)
+
+    def _on_ingest_signal(self, topic: str, payload: dict) -> None:
+        sev = (payload or {}).get("severity", "INFO")
+        if self._honey_pot is not None:
+            GLib.idle_add(self._honey_pot.pulse, sev)
+
+    def _on_destroy(self, *_):
+        event_bus.unsubscribe("event.ingested", self._on_ingest_signal)
+        if self._refresh_id is not None:
+            try:
+                GLib.source_remove(self._refresh_id)
+            except Exception:
+                pass
+            self._refresh_id = None
 
     def _build_ui(self) -> None:
         # Header
@@ -40,6 +64,15 @@ class DashboardView(Gtk.Box):
 
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=20)
         content.set_margin_all(24)
+
+        # ── Centerpiece honey pot ─────────────────────────────────
+        # Fills with honey as events accumulate, pulses on new events,
+        # overflows when full. Doubles as the app's visual identity.
+        pot_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        pot_row.set_halign(Gtk.Align.CENTER)
+        self._honey_pot = HoneyPotWidget()
+        pot_row.append(self._honey_pot)
+        content.append(pot_row)
 
         # Stat cards row
         self._cards_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
@@ -158,6 +191,8 @@ class DashboardView(Gtk.Box):
 
     def _update_ui(self, total, last_24h, last_1h, critical_unacked,
                    sev_data, top_attk, top_creds, recent_data, health_data) -> bool:
+        if self._honey_pot is not None:
+            self._honey_pot.set_event_count(total)
         self._update_card(self._card_total, f"{total:,}")
         self._update_card(self._card_24h, f"{last_24h:,}")
         self._update_card(self._card_1h, f"{last_1h:,}")

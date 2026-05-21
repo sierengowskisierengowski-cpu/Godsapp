@@ -132,3 +132,9 @@ id = "kdPhnqypPdwswwzLNGxJH"
 uri = "file://dist/godsapp-0.4.0.zip"
 type = "unspecified"
 title = "GodsApp v0.4.0 — zip"
+
+[[outputs]]
+id = "mrxGrRkRyg-pyG0MBGHvZ"
+uri = "file://meli/docs/logo_variants_v1.png"
+type = "image"
+title = "Meli — 4 logo variants (first pass)"
