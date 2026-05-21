@@ -35,6 +35,8 @@ SYSTEM_PAGES: list[dict[str, Any]] = [
             ("ui.auto_fade_pulse_seconds","Auto-fade pulse after (sec)", "int", 6,
                 "Window-border pulse returns to idle this many seconds after a scan finishes.", None),
             ("ui.show_splash",            "Show splash on launch", "bool", True, None, None),
+            ("ui.sounds_enabled",         "Splash sound effects (thunder)", "bool", True,
+                "Plays a cinematic thunder rumble during the startup splash. Requires paplay, pw-play, aplay, ffplay, or mpv on the system.", None),
             ("database.url",              "Database URL (blank = SQLite)", "text", "", None, None),
         ],
     },

@@ -80,6 +80,7 @@ class CommandPalette(Adw.Window):
 
         self._list = Gtk.ListBox()
         self._list.set_selection_mode(Gtk.SelectionMode.BROWSE)
+        self._list.set_activate_on_single_click(True)
         self._list.add_css_class("cmd-palette-list")
         self._list.connect("row-activated", lambda _l, _r: self._activate_selected())
         scroll = Gtk.ScrolledWindow()

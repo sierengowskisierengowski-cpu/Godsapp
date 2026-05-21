@@ -36,6 +36,7 @@ class Sidebar(Gtk.Box):
 
         self._list = Gtk.ListBox()
         self._list.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self._list.set_activate_on_single_click(True)
         self._list.add_css_class("navigation-sidebar")
         self._list.connect("row-activated", self._on_row_activated)
 

@@ -72,3 +72,15 @@ id = "URZn7tfeqqiOz9iWc2W3T"
 uri = "file://godsapp-v0.3.5.zip"
 type = "unspecified"
 title = "GodsApp v0.3.5 — palette double-fire guard (zip)"
+
+[[outputs]]
+id = "EojFbWCJZrTYqoR72aCHi"
+uri = "file://godsapp-v0.3.6.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.3.6 — Cinematic Storm Splash"
+
+[[outputs]]
+id = "y42biPrin-eskmTygH4DS"
+uri = "file://godsapp-v0.3.6.zip"
+type = "unspecified"
+title = "GodsApp v0.3.6 (zip)"

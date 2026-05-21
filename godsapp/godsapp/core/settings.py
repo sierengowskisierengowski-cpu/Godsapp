@@ -39,6 +39,7 @@ class UISettings(BaseModel):
     matrix_scramble: bool = True
     auto_fade_pulse_seconds: int = 6
     show_splash: bool = True
+    sounds_enabled: bool = True
 
 
 class DatabaseSettings(BaseModel):

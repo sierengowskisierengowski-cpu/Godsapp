@@ -1,4 +1,4 @@
 graft godsapp/resources
-recursive-include godsapp/resources *.css *.svg *.png *.ico *.txt
+recursive-include godsapp/resources *.css *.svg *.png *.ico *.txt *.wav *.ogg
 include README.md
 include LICENSE
