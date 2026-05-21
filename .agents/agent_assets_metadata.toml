@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "FYynlqm5lsRi9hHhQ8tOO"
+uri = "file://godsapp-v0.3.0.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.3.0 — full source tarball"
