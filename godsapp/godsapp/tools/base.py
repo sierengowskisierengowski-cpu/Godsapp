@@ -36,6 +36,10 @@ class Tool(ABC):
     description: str = ""
     requires_binary: Optional[str] = None
     options: list[ToolOption] = []
+    # v0.4.0 — Learn Mode metadata
+    difficulty: str = "intermediate"   # beginner | intermediate | expert
+    learn_key: str = ""                # key into godsapp.core.learn.LEARN_CONTENT;
+                                       # if blank, falls back to `name`
 
     @abstractmethod
     async def run(

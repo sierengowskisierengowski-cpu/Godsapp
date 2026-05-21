@@ -18,6 +18,7 @@ from godsapp.core.scans import runner
 from godsapp.core.settings import load_settings
 from godsapp.tools import registry
 from godsapp.ui.command_palette import CommandPalette, build_commands
+from godsapp.ui.onboarding import OnboardingWindow, maybe_show_tour
 from godsapp.ui.sidebar import Sidebar
 from godsapp.ui.storm import LightningOverlay
 from godsapp.ui.terminal_overlay import TerminalOverlay
@@ -225,11 +226,41 @@ class MainWindow(Adw.ApplicationWindow):
                 return
             except Exception:
                 self._palette_open = None
-        cmds = build_commands(PINNED_ITEMS, CATEGORY_LABELS)
+        # Use the cached static commands (pages + tools + settings + slashes)
+        # so palette opens instantly even on slow disks; DB-backed sources
+        # (workspaces + findings) are appended lazily off the main thread.
+        # Always hand the palette a *fresh copy* — extend_commands() mutates
+        # the list, and we must not pollute the static cache across openings.
+        cmds = list(self._palette_static_cache())
         palette = CommandPalette(self, cmds, on_pick=self._on_palette_pick)
         self._palette_open = palette
         palette.connect("close-request", lambda *_: (setattr(self, "_palette_open", None), False)[1])
         palette.present()
+        # Lazy DB fetch — runs in a worker thread, results pushed back on idle.
+        import threading
+        def _bg() -> None:
+            try:
+                from godsapp.ui.command_palette import (
+                    _build_dynamic_commands,
+                )
+                dyn = _build_dynamic_commands()
+            except Exception:
+                dyn = []
+            def _apply() -> bool:
+                if palette is self._palette_open and dyn:
+                    try: palette.extend_commands(dyn)
+                    except Exception: pass
+                return False
+            GLib.idle_add(_apply)
+        threading.Thread(target=_bg, daemon=True, name="palette-dyn").start()
+
+    def _palette_static_cache(self) -> list:
+        cache = getattr(self, "_palette_static", None)
+        if cache is None:
+            cache = build_commands(PINNED_ITEMS, CATEGORY_LABELS,
+                                   include_dynamic=False)
+            self._palette_static = cache
+        return cache
 
     def refresh_current(self) -> None:
         name = self._stack.get_visible_child_name() or "dashboard"
@@ -398,6 +429,83 @@ class MainWindow(Adw.ApplicationWindow):
             if hasattr(sv, "goto"):
                 try: sv.goto(key)
                 except Exception: pass
+        elif kind == "workspace":
+            # Jump to the Workspaces page (deep-link to a specific workspace
+            # editor is a v0.4.1 enhancement; for now, just surface the page).
+            self._on_select("pinned", "workspaces")
+            self.show_toast(f"Workspace: {key[:8]}…")
+        elif kind == "finding":
+            self._on_select("pinned", "findings")
+            # Defer the editor open until the FindingsView has refreshed.
+            try:
+                fv = self._findings_view
+                GLib.idle_add(lambda: (fv._open_edit(key), False)[1])
+            except Exception:
+                pass
+        elif kind == "slash":
+            self._handle_slash(key)
+
+    def _handle_slash(self, slash: str) -> None:
+        if slash == "/tour":
+            self.show_onboarding(force=True); return
+        if slash == "/learn":
+            try:
+                from godsapp.core.settings import load_settings, save_settings
+                s = load_settings()
+                s.learn.enabled = not s.learn.enabled
+                save_settings(s)
+                self.show_toast(
+                    f"Learn Mode {'enabled' if s.learn.enabled else 'disabled'}")
+            except Exception:
+                self.show_toast("Could not toggle Learn Mode")
+            return
+        if slash == "/terminal":
+            try: self._terminal_overlay.toggle()
+            except Exception: self.show_toast("Terminal failed to open")
+            return
+        if slash == "/refresh":
+            self.refresh_current(); return
+        if slash == "/dashboard":
+            self._on_select("pinned", "dashboard"); return
+        if slash == "/help":
+            self.show_toast(
+                "Slash: /tour /learn /terminal /refresh /dashboard  ·  "
+                "Tags: #critical #high #beginner #expert  ·  Ctrl+K palette")
+            return
+
+    def show_onboarding(self, *, force: bool = False) -> None:
+        # Singleton guard — if a tour is already open, present it instead
+        # of stacking a second window (would otherwise both write
+        # onboarding.completed on close).
+        existing = getattr(self, "_onboarding_win", None)
+        if existing is not None:
+            try:
+                if existing.get_visible():
+                    existing.present(); return
+            except Exception:
+                pass
+            self._onboarding_win = None
+        try:
+            win = maybe_show_tour(self, on_jump=self._on_tour_jump, force=force)
+            if win is not None:
+                self._onboarding_win = win
+                win.connect(
+                    "close-request",
+                    lambda *_: (setattr(self, "_onboarding_win", None), False)[1],
+                )
+        except Exception:
+            pass
+
+    def _on_tour_jump(self, target: str) -> None:
+        if target == "palette":
+            self.open_command_palette(); return
+        if target == "focus-sidebar":
+            try: self._sidebar.focus_search()
+            except Exception: pass
+            return
+        if target in ("workspaces", "findings", "evidence", "dashboard",
+                      "reports", "settings"):
+            self._on_select("pinned", target)
 
     def _on_key(self, _ctrl, keyval, _kc, state) -> bool:
         # Ctrl+K and F5 are app-level accelerators (see application.py); do not

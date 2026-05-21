@@ -122,6 +122,55 @@ SYSTEM_PAGES: list[dict[str, Any]] = [
             ("plugins.require_signature", "Require manifest signature",  "bool", False, None, None),
         ],
     },
+    {
+        "key": "onboarding", "title": "Onboarding", "icon": "help-faq-symbolic",
+        "subtitle": "First-launch guided tour through every major surface.",
+        "fields": [
+            ("onboarding.enabled",    "Show tour on first launch", "bool", True, None, None),
+            ("onboarding.completed",  "Tour completed (uncheck to re-run on next launch)",
+                "bool", False, None, None),
+            ("onboarding.show_hints", "Surface contextual hints in views",
+                "bool", True, None, None),
+        ],
+    },
+    {
+        "key": "learn", "title": "Learn Mode", "icon": "accessories-dictionary-symbolic",
+        "subtitle": "Inline tutorials, per-tool difficulty badges, expanded tooltips.",
+        "fields": [
+            ("learn.enabled",                "Show Learn panels inside every tool",
+                "bool", False, None, None),
+            ("learn.show_difficulty_badges", "Show difficulty dots in the sidebar",
+                "bool", True, None, None),
+            ("learn.auto_open_for_new_tools", "Auto-open Learn panel for tools you haven't used",
+                "bool", True, None, None),
+            ("learn.tooltip_delay_ms",       "Tooltip delay (ms)",
+                "int", 800, None, None),
+        ],
+    },
+    {
+        "key": "templates", "title": "Workspace Templates", "icon": "view-list-symbolic",
+        "subtitle": "Pre-configured engagement starters (Bug Bounty, Pentest, CTF, Forensics…).",
+        "fields": [
+            ("templates.default_template",     "Default template",
+                "choice", "blank", None,
+                ["blank", "bug-bounty", "ext-pentest", "int-pentest", "red-team",
+                 "threat-hunt", "forensics", "ctf", "compliance", "home-lab"]),
+            ("templates.confirm_before_apply", "Confirm before applying template",
+                "bool", True, None, None),
+        ],
+    },
+    {
+        "key": "dedup", "title": "Findings Dedup", "icon": "edit-copy-symbolic",
+        "subtitle": "Detect and merge duplicate findings; chain related findings.",
+        "fields": [
+            ("dedup.enabled",              "Suggest merges for likely duplicates",
+                "bool", True, None, None),
+            ("dedup.suggest_threshold",    "Suggestion threshold (0–100)",
+                "int", 85, "Findings scoring above this percent similarity prompt a merge.", None),
+            ("dedup.auto_merge_threshold", "Silent-merge threshold (0–100)",
+                "int", 98, "Findings scoring above this percent merge automatically with no prompt.", None),
+        ],
+    },
 ]
 
 

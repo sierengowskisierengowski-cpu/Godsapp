@@ -148,6 +148,30 @@ class CustodyChain(Base):
     evidence: Mapped[Evidence] = relationship(back_populates="custody")
 
 
+class FindingLink(Base):
+    """Bidirectional link between two findings (dedup-merge, exploit chain, etc.).
+
+    `kind` is free-form: "duplicate" | "chain" | "related" | "supersedes" | ...
+    `a_id` and `b_id` are ordered so (a, b) is unique; callers should put the
+    smaller UUID string first to avoid storing both (a→b) and (b→a).
+    """
+    __tablename__ = "finding_links"
+    __table_args__ = (
+        UniqueConstraint("a_id", "b_id", "kind", name="uq_finding_links_ab_kind"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    a_id: Mapped[str] = mapped_column(
+        ForeignKey("findings.id", ondelete="CASCADE"), index=True
+    )
+    b_id: Mapped[str] = mapped_column(
+        ForeignKey("findings.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(32), default="related", index=True)
+    note: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class Plugin(Base):
     __tablename__ = "plugins"
     __table_args__ = (UniqueConstraint("module", name="uq_plugins_module"),)

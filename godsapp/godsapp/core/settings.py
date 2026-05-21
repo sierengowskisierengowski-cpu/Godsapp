@@ -105,6 +105,32 @@ class PluginsSettings(BaseModel):
     require_signature: bool = False
 
 
+class OnboardingSettings(BaseModel):
+    enabled: bool = True           # show on first launch
+    completed: bool = False        # set True after user finishes/skips tour
+    show_hints: bool = True        # surface contextual hints in views
+
+
+class LearnSettings(BaseModel):
+    enabled: bool = False          # show Learn panels inside ScanView
+    tooltip_delay_ms: int = 800
+    show_difficulty_badges: bool = True
+    auto_open_for_new_tools: bool = True
+
+
+class TemplatesSettings(BaseModel):
+    default_template: str = "blank"
+    confirm_before_apply: bool = True
+
+
+class DedupSettings(BaseModel):
+    """Stored as integer percentages (0–100) so the Settings UI int spin row
+    renders the same values the user sees. Callers convert to 0–1 floats."""
+    enabled: bool = True
+    suggest_threshold: int = 85     # show "looks like a duplicate?" prompt
+    auto_merge_threshold: int = 98  # only merge silently above this
+
+
 class Settings(BaseModel):
     api: APISettings = Field(default_factory=APISettings)
     ui: UISettings = Field(default_factory=UISettings)
@@ -117,6 +143,10 @@ class Settings(BaseModel):
     evidence: EvidenceSettings = Field(default_factory=EvidenceSettings)
     findings: FindingsSettings = Field(default_factory=FindingsSettings)
     plugins: PluginsSettings = Field(default_factory=PluginsSettings)
+    onboarding: OnboardingSettings = Field(default_factory=OnboardingSettings)
+    learn: LearnSettings = Field(default_factory=LearnSettings)
+    templates: TemplatesSettings = Field(default_factory=TemplatesSettings)
+    dedup: DedupSettings = Field(default_factory=DedupSettings)
     categories: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 

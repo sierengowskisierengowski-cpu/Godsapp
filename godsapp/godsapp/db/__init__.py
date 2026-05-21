@@ -4,6 +4,7 @@ from godsapp.db.models import (
     CustodyChain,
     Evidence,
     Finding,
+    FindingLink,
     Plugin,
     Scan,
     Schedule,
@@ -13,6 +14,6 @@ from godsapp.db.models import (
 
 __all__ = [
     "get_engine", "get_session", "init_db",
-    "Workspace", "Scan", "Finding", "Evidence", "CustodyChain",
+    "Workspace", "Scan", "Finding", "FindingLink", "Evidence", "CustodyChain",
     "Plugin", "Schedule", "Setting", "AuditLog",
 ]

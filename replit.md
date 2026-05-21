@@ -75,7 +75,19 @@ The only other thing in the workspace is `artifacts/mockup-sandbox/` — Replit 
 - The systemd user unit needs `Environment=PYTHONPATH=/opt/godsapp/app` if the launcher is bypassed; the bundled launcher (`/usr/local/bin/godsapp`) calls the venv binary directly, so PYTHONPATH is only used as a belt-and-suspenders.
 - On Debian/Ubuntu, `gir1.2-adw-1` is sometimes named `gir1.2-libadwaita-1` on older releases; the installer surfaces a clear error if it can't import `Adw`.
 
-## Status — v0.3.1 (latest)
+## Status — v0.4.0 (latest)
+
+**Five-feature push: discoverability + accuracy.**
+
+- **First-launch onboarding tour** (`ui/onboarding.py`) — 8-step centred card walking through Workspaces, sidebar search, Findings, Evidence, command palette, terminal summoning. Skippable, persists `onboarding.completed`, re-launchable from Settings or `/tour` slash command. Singleton-guarded so the CTAs ("Open Workspaces", "Focus sidebar", "Open palette") can interact with the live main window without stacking duplicates.
+- **Learn Mode framework** (`core/learn.py`) — structured `LearnEntry` (summary, when, how, options, examples, pitfalls, references) with shipped content for `nmap`, `sqlmap`, `hydra`, `subdomain-brute`, `hashcat`, `gobuster`. Difficulty levels (beginner/intermediate/expert) render as coloured dots in the sidebar. Settings toggle. Tools fall back to `name` as the Learn key when `learn_key` is blank.
+- **Workspace templates** (`core/templates.py`) — 10 starters: Blank, Bug Bounty, External Pentest, Internal Pentest, Red Team, Threat Hunt, Forensics, CTF, Compliance, Home Lab. Each ships default target, tags, recommended tools, and a markdown welcome note written as the workspace's `README.md`. Picker dropdown in the new-workspace dialog auto-fills empty fields.
+- **Findings dedup + chaining** (`core/dedup.py` + new `FindingLink` table) — weighted score: host 0.20, port 0.10, CVE overlap 0.25, MITRE technique 0.10, title similarity 0.25, description tokens 0.10. Each finding row gets a 🔗 button opening a dialog with ranked matches, per-match reasons, and a kind picker (duplicate / related / chain / supersedes). Duplicate links auto-mark the newer finding `status=duplicate`. Canonical (min,max) ID ordering avoids storing both directions. Thresholds stored as 0–100 ints in Settings → Findings Dedup.
+- **Command palette enhancements** (`ui/command_palette.py`) — now indexes live workspaces + most-recent 200 findings, six slash commands (`/tour /learn /terminal /refresh /dashboard /help`), `#tag` filter syntax (`#critical`, `#high`, `#beginner`, `#expert`, status tags). Static commands cached at first open; dynamic DB-backed sources fetched in a worker thread and appended via `extend_commands()` so the palette never blocks on disk I/O. The cached static list is copied per-open so the palette never pollutes the cache.
+
+`FindingLink` table is created via `init_db()`'s `create_all` on next launch — no Alembic migration required. v0.4.0 release lives in `./dist/godsapp-0.4.0.tar.gz` and `./dist/godsapp-0.4.0.zip`.
+
+## Status — v0.3.1
 
 **OLYMPUS polish pass.** Aesthetic shifted to "Mount Olympus": cloud-white foregrounds + sky-blue mid-tones + divine-gold (`#f0d27a`) accents on a deep twilight base. Animated 4-layer radial-gradient aurora drifts across the window every 28s. Sidebar gets a gold/cloud fluted-column edge (inset box-shadows); cards get a gold capital + column-stripe flourish. SVG logo rebuilt with radial cloud + sky halo + gold bolt.
 

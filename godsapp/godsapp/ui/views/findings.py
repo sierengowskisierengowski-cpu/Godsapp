@@ -12,7 +12,8 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from godsapp.db import Finding, Scan, Workspace, get_session
+from godsapp.core.dedup import find_duplicates
+from godsapp.db import Finding, FindingLink, Scan, Workspace, get_session
 from godsapp.ui.header_helpers import open_settings, page_header
 
 _SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
@@ -156,9 +157,169 @@ class FindingsView(Gtk.Box):
         status_lbl.add_css_class("dim-label")
         edit_btn = Gtk.Button.new_from_icon_name("document-edit-symbolic")
         edit_btn.add_css_class("flat")
+        edit_btn.set_tooltip_text("Edit / triage this finding")
         edit_btn.connect("clicked", lambda *_: self._open_edit(data["id"]))
-        row.add_suffix(status_lbl); row.add_suffix(edit_btn)
+        link_btn = Gtk.Button.new_from_icon_name("emblem-shared-symbolic")
+        link_btn.add_css_class("flat")
+        link_btn.set_tooltip_text("Find duplicates or link related findings")
+        link_btn.connect("clicked", lambda *_, d=data: self._open_link_dialog(d))
+        row.add_suffix(status_lbl); row.add_suffix(link_btn); row.add_suffix(edit_btn)
         return row
+
+    # ── dedup / link UI (v0.4.0) ──────────────────────────────────────────
+    def _open_link_dialog(self, data: dict) -> None:
+        """Show likely duplicates in the same workspace and let the user
+        confirm a link (kind=duplicate / related / chain / supersedes)."""
+        candidate = {
+            "title":           data.get("title"),
+            "host":            data.get("host"),
+            "port":            data.get("port"),
+            "cve_ids":         data.get("cve_ids"),
+            "mitre_technique": data.get("mitre_technique"),
+            "description":    data.get("description"),
+        }
+        # Settings: thresholds are stored as 0–100 ints; normalise to 0–1 here.
+        # Accept legacy float values (≤1.0) defensively in case an old settings
+        # file is loaded.
+        def _to_fraction(v: float) -> float:
+            v = float(v)
+            if v > 1.0:
+                v = v / 100.0
+            return max(0.0, min(1.0, v))
+        try:
+            from godsapp.core.settings import load_settings
+            ds = load_settings().dedup
+            sugg = _to_fraction(ds.suggest_threshold)
+            enabled = ds.enabled
+        except Exception:
+            sugg, enabled = 0.85, True
+        # Always show the dialog when the user clicks Link, but warn the user
+        # if dedup is globally disabled so they understand the suggestions are
+        # read-only / no auto-merge will fire on save.
+        try:
+            # Show borderline candidates too: 0.20 below the suggestion
+            # threshold. The score floor is intentionally not clamped — if the
+            # user sets a high suggestion threshold (e.g. 95%), they probably
+            # still want to see ~75% candidates here.
+            view_threshold = max(0.0, sugg - 0.20)
+            matches = find_duplicates(
+                data["workspace_id"], candidate,
+                threshold=view_threshold,
+                exclude_finding_id=data["id"],
+                limit=20,
+            )
+        except Exception:
+            matches = []
+
+        dlg = Adw.Window(transient_for=self._parent, modal=True)
+        dlg.set_title(f"Link finding · {data['title'][:60]}")
+        dlg.set_default_size(640, 480)
+        tv = Adw.ToolbarView()
+        hb = Adw.HeaderBar(); hb.add_css_class("flat")
+        tv.add_top_bar(hb)
+
+        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        body.set_margin_top(14); body.set_margin_bottom(14)
+        body.set_margin_start(14); body.set_margin_end(14)
+
+        if not enabled:
+            warn = Gtk.Label(
+                label="Dedup is disabled in Settings → Findings Dedup; "
+                      "suggestions below are read-only previews.",
+                xalign=0)
+            warn.add_css_class("dim-label"); warn.set_wrap(True)
+            body.append(warn)
+
+        if not matches:
+            body.append(Gtk.Label(
+                label="No similar findings detected in this workspace.",
+                xalign=0))
+        else:
+            sugg_pct = int(sugg * 100)
+            note = Gtk.Label(
+                label=f"Suggestion threshold: {sugg_pct}%  ·  "
+                      f"matches above this score are likely duplicates.",
+                xalign=0)
+            note.add_css_class("dim-label")
+            body.append(note)
+            header = Gtk.Label(
+                label=f"{len(matches)} potentially related finding(s) in this workspace:",
+                xalign=0)
+            header.add_css_class("dim-label")
+            body.append(header)
+
+            kind_dd = Gtk.DropDown.new_from_strings(
+                ["duplicate", "related", "chain", "supersedes"])
+            kind_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+            kind_row.append(Gtk.Label(label="Link kind:"))
+            kind_row.append(kind_dd)
+            body.append(kind_row)
+
+            # Existing finding row → score + reasons + Link button
+            match_box = Gtk.ListBox()
+            match_box.add_css_class("boxed-list")
+            scroll = Gtk.ScrolledWindow()
+            scroll.set_vexpand(True); scroll.set_child(match_box)
+            body.append(scroll)
+
+            # Pull titles for context (one extra query — small lists)
+            try:
+                with get_session() as s:
+                    others = {
+                        f.id: f for f in
+                        s.query(Finding).filter(
+                            Finding.id.in_([m.finding_id for m in matches])
+                        ).all()
+                    }
+            except Exception:
+                others = {}
+
+            for m in matches:
+                other = others.get(m.finding_id)
+                title = other.title if other is not None else m.finding_id[:8]
+                reason_str = " · ".join(m.reasons) if m.reasons else "weak signal"
+                ar = Adw.ActionRow(
+                    title=title,
+                    subtitle=f"score {int(m.score * 100)}% · {reason_str}")
+                link = Gtk.Button(label="Link")
+                link.add_css_class("suggested-action")
+                kind_dd_ref = kind_dd
+                def _do_link(_b, fid=m.finding_id) -> None:
+                    kind = ["duplicate", "related", "chain",
+                            "supersedes"][kind_dd_ref.get_selected()]
+                    self._create_link(data["id"], fid, kind)
+                    dlg.close()
+                link.connect("clicked", _do_link)
+                ar.add_suffix(link)
+                match_box.append(ar)
+
+        tv.set_content(body); dlg.set_content(tv); dlg.present()
+
+    def _create_link(self, a_id: str, b_id: str, kind: str) -> None:
+        """Insert a FindingLink with canonical (min, max) ordering."""
+        x, y = sorted((a_id, b_id))
+        try:
+            with get_session() as s:
+                # Skip if already linked with this kind.
+                exists = s.query(FindingLink).filter_by(
+                    a_id=x, b_id=y, kind=kind).first()
+                if exists is None:
+                    s.add(FindingLink(a_id=x, b_id=y, kind=kind))
+            # If this is a duplicate link, mark the *newer* one as duplicate.
+            if kind == "duplicate":
+                with get_session() as s:
+                    a = s.get(Finding, a_id); b = s.get(Finding, b_id)
+                    if a is not None and b is not None:
+                        newer = a if (a.created_at or 0) > (b.created_at or 0) else b
+                        newer.status = "duplicate"
+            toaster = getattr(self._parent, "_toast_overlay", None)
+            if toaster is not None:
+                toaster.add_toast(Adw.Toast(title=f"Linked as {kind}"))
+        except Exception as e:
+            toaster = getattr(self._parent, "_toast_overlay", None)
+            if toaster is not None:
+                toaster.add_toast(Adw.Toast(title=f"Link failed: {e}"))
+        self.refresh()
 
     # ── csv export ────────────────────────────────────────────────────────
     def _export_csv(self) -> None:

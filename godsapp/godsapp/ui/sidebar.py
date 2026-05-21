@@ -100,8 +100,30 @@ class Sidebar(Gtk.Box):
         dot = Gtk.Label(label="▸"); dot.add_css_class("tool-dot")
         name = Gtk.Label(label=tool.title or tool.name, xalign=0)
         name.set_hexpand(True); name.set_ellipsize(3)
-        name.set_tooltip_text(tool.description or "")
+
+        # Difficulty badge (Learn Mode v0.4.0) ─────────────────────────
+        try:
+            from godsapp.core.learn import difficulty_for_tool
+            from godsapp.core.settings import load_settings
+            show_badge = load_settings().learn.show_difficulty_badges
+        except Exception:
+            show_badge, difficulty_for_tool = False, None
+        diff = getattr(tool, "difficulty", None) or (
+            difficulty_for_tool(getattr(tool, "learn_key", "") or tool.name)
+            if difficulty_for_tool else "intermediate")
+        tooltip = tool.description or ""
+        if show_badge and diff:
+            tooltip = f"{tooltip}\n\nDifficulty: {diff}".strip()
+        name.set_tooltip_text(tooltip)
+
         box.append(dot); box.append(name)
+        if show_badge and diff:
+            badge = Gtk.Label(label="●")
+            badge.add_css_class("difficulty-badge")
+            badge.add_css_class(f"diff-{diff}")
+            badge.set_tooltip_text(f"{diff.title()} difficulty")
+            box.append(badge)
+
         row.set_child(box)
         row._meta = ("tool", tool.name)  # type: ignore[attr-defined]
         return row

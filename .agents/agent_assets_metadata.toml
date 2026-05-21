@@ -120,3 +120,15 @@ id = "1QcyiMLLkI_VF6HqxDZ_N"
 uri = "file://godsapp-v0.3.9.zip"
 type = "unspecified"
 title = "GodsApp v0.3.9 (zip)"
+
+[[outputs]]
+id = "zAQh5I3QC3Lld8z-uAu2c"
+uri = "file://dist/godsapp-0.4.0.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.4.0 — tar.gz"
+
+[[outputs]]
+id = "kdPhnqypPdwswwzLNGxJH"
+uri = "file://dist/godsapp-0.4.0.zip"
+type = "unspecified"
+title = "GodsApp v0.4.0 — zip"

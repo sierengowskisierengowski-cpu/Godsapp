@@ -14,16 +14,31 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 
+from sqlalchemy import select
+
 from godsapp.tools import registry
 
 
 @dataclass
 class Command:
-    kind: str           # "page" | "tool" | "settings" | "action"
+    kind: str           # "page" | "tool" | "settings" | "action" |
+                        # "finding" | "workspace" | "slash"
     key: str            # payload routed to MainWindow._on_select or callback id
     title: str
     subtitle: str
     keywords: str       # space-separated, lowercased
+
+
+def _parse_tags(q: str) -> tuple[str, set[str]]:
+    """Strip `#tag` tokens from a query; return (clean_query, tags)."""
+    tags: set[str] = set()
+    parts = []
+    for tok in q.split():
+        if tok.startswith("#") and len(tok) > 1:
+            tags.add(tok[1:].lower())
+        else:
+            parts.append(tok)
+    return " ".join(parts).strip(), tags
 
 
 def _score(query: str, cmd: Command) -> int:
@@ -31,6 +46,17 @@ def _score(query: str, cmd: Command) -> int:
     q = query.lower().strip()
     if not q:
         return 1
+    # `#tag` filtering: command must contain the tag in keywords; clean query
+    # then scores against the title/keywords as usual.
+    clean, tags = _parse_tags(q)
+    if tags:
+        kw = cmd.keywords
+        for t in tags:
+            if t not in kw:
+                return 0
+        q = clean
+        if not q:
+            return 10  # tag-only match
     title = cmd.title.lower()
     if q == title:
         return 1000
@@ -70,7 +96,9 @@ class CommandPalette(Adw.Window):
 
         self._entry = Gtk.Entry()
         self._entry.add_css_class("cmd-input")
-        self._entry.set_placeholder_text("Jump to anything — tools, pages, settings…")
+        self._entry.set_placeholder_text(
+            "Jump to anything — tools, findings, workspaces · "
+            "/slash · #critical · #high · #beginner")
         self._entry.connect("changed", lambda *_: self._refresh())
         self._entry.connect("activate", lambda *_: self._activate_selected())
         wrap.append(self._entry)
@@ -155,6 +183,14 @@ class CommandPalette(Adw.Window):
         row.set_child(box)
         return row
 
+    def extend_commands(self, more: list[Command]) -> None:
+        """Append commands after the palette is already open (used for the
+        lazy DB-backed sources so the palette doesn't block on disk I/O)."""
+        if not more:
+            return
+        self._commands.extend(more)
+        self._refresh()
+
     def _activate_selected(self) -> None:
         row = self._list.get_selected_row()
         if row is None and self._list.get_row_at_index(0) is not None:
@@ -171,9 +207,72 @@ class CommandPalette(Adw.Window):
             pass
 
 
+SLASH_COMMANDS: list[tuple[str, str, str]] = [
+    # (slash key, title, subtitle)
+    ("/tour",       "Re-launch onboarding tour",
+     "Walk through every major view again."),
+    ("/learn",      "Toggle Learn Mode",
+     "Show inline tutorials inside every tool."),
+    ("/help",       "Open command palette help",
+     "Slash commands, tags (#critical), and shortcuts."),
+    ("/terminal",   "Toggle terminal overlay",
+     "Slide-down VTE shell. Same as double-clicking the title."),
+    ("/refresh",    "Refresh current view",
+     "Re-load the data for whatever's on screen (F5)."),
+    ("/dashboard",  "Jump to Dashboard",
+     "KPIs, severity bars, recent activity."),
+]
+
+
+def _build_dynamic_commands() -> list[Command]:
+    """DB-backed sources: workspaces + recent findings. Safe to call from a
+    worker thread — only touches a SQLAlchemy session and returns plain data."""
+    cmds: list[Command] = []
+    try:
+        from godsapp.db import Finding, Workspace, get_session
+        with get_session() as s:
+            for ws in s.execute(
+                    select(Workspace).order_by(Workspace.created_at.desc())
+            ).scalars().all():
+                cmds.append(Command(
+                    kind="workspace", key=ws.id,
+                    title=f"Workspace · {ws.name}",
+                    subtitle=ws.description or ws.target or "Open the Workspaces view",
+                    keywords=f"workspace {ws.name.lower()} "
+                             f"{(ws.description or '').lower()} "
+                             f"{(ws.target or '').lower()} #workspace",
+                ))
+            recents = s.execute(
+                select(Finding).order_by(Finding.created_at.desc()).limit(200)
+            ).scalars().all()
+            for f in recents:
+                sev = (f.severity or "info").lower()
+                cmds.append(Command(
+                    kind="finding", key=f.id,
+                    title=f"[{sev.upper()}] {f.title}",
+                    subtitle=f"{f.host or '—'}  ·  {f.service or ''}  ·  "
+                             f"{(f.status or 'open')}",
+                    keywords=f"finding {sev} {f.title.lower()} "
+                             f"{(f.host or '').lower()} "
+                             f"{(f.cve_ids or '').lower()} "
+                             f"{(f.tags or '').lower()} "
+                             f"#{sev} #{(f.status or 'open').lower()}",
+                ))
+    except Exception:
+        pass
+    return cmds
+
+
 def build_commands(pinned_items: list[tuple[str, str, str]],
-                   categories: list[tuple[str, str, str]]) -> list[Command]:
-    """Build the static + dynamic command list pulled from the registry."""
+                   categories: list[tuple[str, str, str]],
+                   *,
+                   include_dynamic: bool = True) -> list[Command]:
+    """Build the static + dynamic command list pulled from the registry,
+    plus live database rows (findings, workspaces) and slash commands.
+
+    When `include_dynamic=False`, the DB-backed sources are skipped — callers
+    should then fetch them off the main thread and call `extend_commands()`.
+    """
     cmds: list[Command] = []
     for key, title, _icon in pinned_items:
         cmds.append(Command(
@@ -184,27 +283,44 @@ def build_commands(pinned_items: list[tuple[str, str, str]],
     cat_titles = {cid: t for cid, t, _i in categories}
     for tool in registry.all():
         cat = cat_titles.get(tool.category, tool.category.title())
+        diff = getattr(tool, "difficulty", "") or "intermediate"
         cmds.append(Command(
             kind="tool", key=tool.name,
             title=tool.title or tool.name,
             subtitle=f"{cat} · {tool.description or tool.requires_binary or ''}".strip(" ·"),
             keywords=f"{tool.name} {tool.category} {tool.title or ''} "
-                    f"{tool.requires_binary or ''} {tool.description or ''}".lower(),
+                    f"{tool.requires_binary or ''} {tool.description or ''} "
+                    f"#{diff} tool".lower(),
         ))
     # Settings anchors
     for anchor, label in (
-        ("general",   "Settings · General / UI / theme"),
-        ("api",       "Settings · REST API"),
-        ("scheduler", "Settings · Scheduler"),
-        ("terminal",  "Settings · Terminal"),
-        ("threat",    "Settings · Threat intel API keys"),
-        ("reports",   "Settings · Reports"),
-        ("plugins",   "Settings · Plugins"),
-        ("evidence",  "Settings · Evidence locker"),
+        ("general",    "Settings · General / UI / theme"),
+        ("api",        "Settings · REST API"),
+        ("scheduler",  "Settings · Scheduler"),
+        ("terminal",   "Settings · Terminal"),
+        ("threat",     "Settings · Threat intel API keys"),
+        ("reports",    "Settings · Reports"),
+        ("plugins",    "Settings · Plugins"),
+        ("evidence",   "Settings · Evidence locker"),
+        ("onboarding", "Settings · Onboarding & Tour"),
+        ("learn",      "Settings · Learn Mode"),
+        ("templates",  "Settings · Workspace Templates"),
+        ("dedup",      "Settings · Findings Dedup"),
     ):
         cmds.append(Command(
             kind="settings", key=anchor, title=label,
             subtitle="Configure GodsApp",
             keywords=f"settings preferences {anchor} {label.lower()}",
         ))
+
+    # Slash commands ─────────────────────────────────────────────────────
+    for slash, title, sub in SLASH_COMMANDS:
+        cmds.append(Command(
+            kind="slash", key=slash, title=f"{slash}  {title}",
+            subtitle=sub,
+            keywords=f"slash {slash[1:]} {title.lower()} command action",
+        ))
+
+    if include_dynamic:
+        cmds.extend(_build_dynamic_commands())
     return cmds

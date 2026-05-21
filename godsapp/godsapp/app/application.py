@@ -67,6 +67,11 @@ class GodsAppApplication(Adw.Application):
             if self._window is None:
                 self._window = MainWindow(self)
             self._window.present()
+            # First-launch onboarding tour. No-op if already completed.
+            try:
+                GLib.idle_add(lambda: (self._window.show_onboarding(), False)[1])
+            except Exception:
+                log.exception("onboarding launch failed")
 
         def _show_login_then_main() -> None:
             show_login(self, on_success=_show_main)

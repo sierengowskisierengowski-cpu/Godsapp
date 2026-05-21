@@ -520,3 +520,51 @@ button.destructive-action:hover { background-color: alpha(@godsapp_critical,.34)
                      inset 0 0 0 2px alpha(@godsapp_cloud_high, 0.40); }
   100% { box-shadow: inset 0 0 0 0   alpha(@godsapp_cloud_high, 0.0); }
 }
+
+/* ──────────────  v0.4.0 — difficulty badges, onboarding, link UI  ────── */
+
+/* Sidebar difficulty dot (●) at the right edge of each tool row. */
+.difficulty-badge {
+    font-size: 9px;
+    margin-left: 4px;
+    opacity: 0.85;
+    min-width: 10px;
+}
+.difficulty-badge.diff-beginner     { color: @godsapp_success; }
+.difficulty-badge.diff-intermediate { color: @godsapp_sky; }
+.difficulty-badge.diff-expert       { color: @godsapp_critical; }
+
+/* Onboarding tour window — frosted, gold-edged. */
+.onboarding-window {
+    background: linear-gradient(160deg,
+                                alpha(@godsapp_panel,     0.96) 0%,
+                                alpha(@godsapp_panel_alt, 0.93) 100%);
+    border: 1px solid alpha(@godsapp_olympus, 0.55);
+    border-radius: 14px;
+    box-shadow: 0 18px 60px alpha(@godsapp_bg_deep, 0.55),
+                inset 0 0 0 1px alpha(@godsapp_cloud_high, 0.06);
+}
+.onboarding-titlebar {
+    color: @godsapp_olympus;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+.onboarding-step-title {
+    color: @godsapp_cloud_high;
+    font-size: 18px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+.onboarding-step-body {
+    color: @godsapp_cloud;
+    font-size: 13px;
+    line-height: 1.55;
+}
+.onboarding-dot {
+    color: alpha(@godsapp_muted, 0.55);
+    font-size: 10px;
+    transition: color 200ms;
+}
+.onboarding-dot.active {
+    color: @godsapp_olympus;
+}
