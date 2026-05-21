@@ -1,0 +1,126 @@
+Releases v0.6.0
+GodsApp v0.4.0 "Olympus" — First Public Preview Latest
+@sierengowskisierengowski-cpu sierengowskisierengowski-cpu released this 15 minutes ago
+ v0.6.0
+ 096ab75
+GodsApp v0.4.0 "Olympus" — First Public Preview ⚡
+Olympus-grade security suite for solo operators, bug bounty hunters, pentesters, threat hunters, and home lab builders.
+
+This is the first public preview release of GodsApp. The application has been rebuilt from the ground up as a native GTK4 desktop suite for Linux. Twelve tool categories, evidence locker with chain of custody, findings triage, scheduler, REST API, embedded terminal, and a plugin system — all in one place.
+
+Status: Preview / pre-1.0. Core architecture is stable. Active development continues toward v1.0 release.
+
+✨ Highlights
+🌩️ Cinematic splash screen with live animated lightning storm, thunder audio, and "Summoning Zeus" boot sequence
+⚡ Live background lightning storm — random strikes ripple across the main window every 15–40 seconds with faint distant thunder (fully toggleable)
+🔐 First-launch setup wizard with master passphrase ("Forge Your First Key")
+🎯 Guided onboarding tour — 8-step walkthrough of every major feature
+🧠 Embedded terminal with ASCII GODSAPP header, live system stats, and persistent shell sessions (requires libvte)
+🔍 Command palette (Ctrl+K) — fuzzy-search across tools, workspaces, settings, and findings
+🎨 Matrix scramble text effects and off-white/cream visual identity with frosted blur throughout
+📊 Severity-distribution dashboard with workspace, scan, finding, and evidence counters
+🛠️ 17-tool catalog organized across 12 categories: Reconnaissance, Web Application, Network, Threat Intelligence, Crypto & Encoding, Mobile, OSINT, Forensics, Malware Analysis, Exploitation, Password, Wireless
+🗂️ Workspace-based engagement model — every scan, finding, and piece of evidence lives in an isolated workspace
+🔒 Session lock with configurable idle timeout
+⚙️ 19 dedicated Settings sub-pages — per-category configuration for every tool family
+🛠️ Supported Tools
+GodsApp orchestrates the following CLI tools (install via system package manager):
+
+Tool	Category	Purpose
+nmap	Network	Port + service scanner
+masscan	Network	Ultra-fast port scanner
+tcpdump	Network	Packet capture
+tshark	Network	Packet analysis
+hashcat	Password	GPU password cracking
+hydra	Password	Network login brute-force
+sqlmap	Web	SQL injection detection
+nikto	Web	Web server vulnerability scanner
+gobuster	Web	Directory + DNS brute-force
+wpscan	Web	WordPress vulnerability scanner
+ffuf	Web	Fast web fuzzer
+whatweb	Web	Web technology fingerprinter
+amass	Recon	Subdomain enumeration (OWASP)
+subfinder	Recon	Subdomain discovery
+theHarvester	OSINT	Email/subdomain harvesting
+dnsrecon	Recon	DNS reconnaissance
+metasploit	Exploitation	Exploitation framework
+Detection is automatic on launch via $PATH lookup. Tools not yet installed are clearly listed in the dashboard's System Status block.
+
+📦 Installation
+Requirements
+Linux desktop with GTK4 ≥ 4.10 and libadwaita ≥ 1.4
+Python 3.11+
+libvte 3.91 / 2.91 (for embedded terminal — optional but recommended)
+Audio output device (for splash sound effects)
+~200 MB disk space (GodsApp itself; CLI tools install separately)
+Install dependencies (Arch Linux)
+sudo pacman -S --needed --noconfirm \
+  python python-pip python-pipx \
+  gtk4 libadwaita vte4 vte-common \
+  python-gobject python-cairo
+Install GodsApp
+git clone https://github.com/sierengowskisierengowski-cpu/Godsapp.git
+cd Godsapp
+./install.sh
+The installer drops binaries into /opt/godsapp/, creates the systemd user service, and adds /usr/local/bin/godsapp to your PATH. Launch with:
+
+godsapp
+Install supported CLI tools (Arch Linux)
+sudo pacman -S --needed --noconfirm \
+  nmap masscan tcpdump wireshark-cli \
+  hashcat hydra sqlmap nikto gobuster wpscan ffuf \
+  metasploit
+
+yay -S --needed --noconfirm amass subfinder python-dnsrecon whatweb
+pip install theHarvester --break-system-packages
+🚀 What's New in v0.4.0
+Initial public preview
+Setup wizard with master passphrase
+Onboarding tour
+Splash screen with live lightning + thunder
+Embedded terminal with ASCII GODSAPP header
+Command palette (Ctrl+K)
+Live background lightning storm with audio
+Per-category settings (19 sub-pages)
+Honest system status (shows missing tools without lying)
+Severity-distribution dashboard
+Tool catalog with 17 tools across 12 categories
+🐛 Known Limitations
+Embedded terminal requires libvte system package; if missing, the terminal pane shows an install hint instead of a shell
+Terminal toggle/slide button placement is being refined in next patch
+Splash → login crossfade transition will be smoothed in next patch
+Some AUR Python packages (e.g. python-aiomultiprocess dependency for theHarvester) may need manual install via pip/pipx instead of yay
+Tool detection currently uses package names; multi-binary tools like Metasploit (binary is msfconsole) may need a manual symlink until v0.5.0's Tool Paths override page
+🗺️ Roadmap
+v0.5.0 — UI polish round: terminal toggle button, full-width terminal pane, refined lightning audio, splash transition crossfade, Tool Paths override settings page, Missing Tools install popover with one-click install
+
+v1.0.0 — All current v0.4.0 features at production quality; full plugin system; REST API stable; complete documentation; all 17 tools fully integrated with output parsers; reproducible builds
+
+v1.1.0 — Major expansion: Learn Mode with inline tutorials, Workspace Templates (Bug Bounty / Pentest / CTF / Forensics / etc.), Notes Sandbox with embedded findings/evidence, AI Assistant panel (opt-in, BYO API key), CVSS Calculator, Report Studio drag-and-drop builder, Integrations Hub (HackerOne / Bugcrowd / Jira / GitHub / Slack / Obsidian / MISP / OpenCTI / TheHive), Asset Timeline, Smart Views, Activity Feed + Time Tracking, Snapshot & Replay, Scope Verifier, Safe Mode
+
+⚠️ Authorization & Responsible Use
+GodsApp is a defensive security platform for authorized testing only.
+
+Use only against systems you own or have explicit written authorization to test.
+Unauthorized scanning, exploitation, or data exfiltration is illegal in most jurisdictions (CFAA, Computer Misuse Act, etc.).
+The Scope Verifier feature (coming v1.1) helps prevent accidental out-of-scope scans.
+GodsApp logs all actions to a tamper-evident audit log per workspace.
+🙏 Credits
+Author: Joseph Sierengowski (@sierengowskisierengowski-cpu)
+License: See LICENSE in this repository
+Project status: Active development, solo-built
+📬 Feedback & Issues
+Found a bug, have a feature request, or want to share what you built with GodsApp? Open an Issue or Discussion on this repo.
+
+Tagline: Olympus is a place. Zeus is the energy. GodsApp is the toolkit.
+
+⚡ Strike with intent.
+
+Assets
+2
+Source code
+(zip)
+1 hour ago
+Source code
+(tar.gz)
+1 hour ago
