@@ -94,6 +94,13 @@ class MeliApplication(Adw.Application):
         self._init_app()
         self._setup_actions()
         self._load_css()
+        self._start_labyrinth()
+
+    def do_shutdown(self) -> None:
+        try:
+            self._stop_labyrinth()
+        finally:
+            Adw.Application.do_shutdown(self)
 
     def _init_app(self) -> None:
         try:
@@ -101,6 +108,56 @@ class MeliApplication(Adw.Application):
             log.info("Database initialised")
         except Exception as e:
             log.error("Database init failed", error=str(e))
+
+    # ---- Labyrinth tarpit (opt-in) -----------------------------------
+
+    _labyrinth = None  # type: ignore[var-annotated]
+
+    def _start_labyrinth(self) -> None:
+        """Start the Labyrinth tarpit daemon if enabled in config.
+
+        Opt-in by design (labyrinth.enabled defaults to False) — running
+        a public-facing tarpit must always be a deliberate decision.
+        """
+        from meli.config import get_config
+        cfg = get_config()
+        if not cfg.get("labyrinth", "enabled", default=False):
+            return
+        try:
+            from meli.labyrinth import LabyrinthDaemon
+            self._labyrinth = LabyrinthDaemon(
+                host=cfg.get("labyrinth", "bind_host", default="0.0.0.0"),
+                port=int(cfg.get("labyrinth", "bind_port", default=2323)),
+                max_sessions=int(cfg.get("labyrinth", "max_sessions", default=200)),
+            )
+            ok = self._labyrinth.start()
+            if ok:
+                log.info("Labyrinth tarpit started",
+                         port=int(cfg.get("labyrinth", "bind_port", default=2323)))
+            else:
+                log.error("Labyrinth tarpit failed to bind — check port + perms",
+                          port=int(cfg.get("labyrinth", "bind_port", default=2323)))
+                self._labyrinth = None
+        except Exception as e:
+            log.error("Labyrinth start failed", error=str(e))
+            self._labyrinth = None
+
+    def _stop_labyrinth(self) -> None:
+        if self._labyrinth is None:
+            return
+        try:
+            clean = self._labyrinth.stop(timeout=5.0)
+            if clean:
+                log.info("Labyrinth tarpit stopped")
+            else:
+                # Thread did not exit within the timeout — the asyncio
+                # server is still unwinding. The daemon is set daemon=True
+                # at the OS thread level, so Python will tear it down on
+                # process exit, but the operator should know.
+                log.warning("Labyrinth tarpit stop timed out — thread still alive")
+        except Exception as e:
+            log.warning("Labyrinth stop error", error=str(e))
+        self._labyrinth = None
 
     def _setup_actions(self) -> None:
         # Quit action

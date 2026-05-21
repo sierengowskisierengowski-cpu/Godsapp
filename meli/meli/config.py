@@ -134,6 +134,14 @@ DEFAULTS: dict[str, Any] = {
         "enabled": True,
         "sound_enabled": True,
     },
+    "labyrinth": {
+        # Opt-in: starting a tarpit on a real interface should always
+        # be a deliberate choice, never a side-effect of installing.
+        "enabled": False,
+        "bind_host": "0.0.0.0",
+        "bind_port": 2323,
+        "max_sessions": 200,
+    },
 }
 
 
