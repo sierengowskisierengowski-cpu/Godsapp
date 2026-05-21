@@ -75,7 +75,22 @@ The only other thing in the workspace is `artifacts/mockup-sandbox/` — Replit 
 - The systemd user unit needs `Environment=PYTHONPATH=/opt/godsapp/app` if the launcher is bypassed; the bundled launcher (`/usr/local/bin/godsapp`) calls the venv binary directly, so PYTHONPATH is only used as a belt-and-suspenders.
 - On Debian/Ubuntu, `gir1.2-adw-1` is sometimes named `gir1.2-libadwaita-1` on older releases; the installer surfaces a clear error if it can't import `Adw`.
 
-## Status — v0.2.0 (latest)
+## Status — v0.3.1 (latest)
+
+**OLYMPUS polish pass.** Aesthetic shifted to "Mount Olympus": cloud-white foregrounds + sky-blue mid-tones + divine-gold (`#f0d27a`) accents on a deep twilight base. Animated 4-layer radial-gradient aurora drifts across the window every 28s. Sidebar gets a gold/cloud fluted-column edge (inset box-shadows); cards get a gold capital + column-stripe flourish. SVG logo rebuilt with radial cloud + sky halo + gold bolt.
+
+**New muscle.**
+- Command palette (`Ctrl+K`) with fuzzy search across every page, tool, and settings anchor (`ui/command_palette.py`). Down/Up to navigate, Enter to jump.
+- Header-bar search trigger button (clickable + shortcut hint) opens the palette.
+- Sidebar live-search filter at the top — type to narrow the tool list.
+- Bottom status bar: STATUS · TOOLS · DB · API + shortcut hint, kept in sync with health probe and scan-runner events.
+- Keyboard shortcuts: `Ctrl+K` palette, `Ctrl+,` settings, `Ctrl+F` focus sidebar search, `F5` refresh, `Esc` dashboard, `Ctrl+1..9` jump to pinned items.
+- Dashboard 2.0: KPI tiles with 7-day deltas, severity-distribution bars, recent-activity feed (latest 12 scans across all workspaces), quick-action launcher tiles, system status card.
+- Findings → CSV export button: writes filtered findings to `~/.local/share/godsapp/evidence/exports/findings-<UTC>.csv` and surfaces a toast.
+
+Bumped to v0.3.1; install.sh still uses `--force-reinstall --no-deps`.
+
+## Status — v0.2.0
 
 - All 12 sidebar tool categories populated with **real subprocess wrappers** (30 tools total). Web, network, password, exploit, wireless, forensics, malware, osint, crypto, mobile, cloud all ship.
 - Cream / ivory off-white palette on translucent dark base; `alpha()` surfaces on window, sidebar, cards (compositor-side blur on KWin/COSMIC/Mutter).

@@ -122,9 +122,15 @@ class SchedulerView(Gtk.Box):
             self._status_lbl.set_text("No tools registered.")
             return
 
-        dlg = Adw.PreferencesWindow(transient_for=self._parent, modal=True)
+        dlg = Adw.Window(transient_for=self._parent, modal=True)
         dlg.set_title("New schedule")
-        dlg.set_default_size(520, 380)
+        dlg.set_default_size(540, 420)
+        tv = Adw.ToolbarView()
+        hb = Adw.HeaderBar()
+        cancel = Gtk.Button(label="Cancel"); cancel.connect("clicked", lambda *_: dlg.close())
+        save = Gtk.Button(label="Create"); save.add_css_class("suggested-action")
+        hb.pack_start(cancel); hb.pack_end(save)
+        tv.add_top_bar(hb)
         page = Adw.PreferencesPage()
         g = Adw.PreferencesGroup(title="Schedule")
 
@@ -144,12 +150,11 @@ class SchedulerView(Gtk.Box):
         args_row = Adw.EntryRow(title="Extra args (key=value, comma-separated)")
         g.add(args_row)
 
-        actions = Adw.PreferencesGroup()
-        bb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8, halign=Gtk.Align.END)
-        cancel = Gtk.Button(label="Cancel"); cancel.connect("clicked", lambda *_: dlg.close())
-        save = Gtk.Button(label="Create"); save.add_css_class("suggested-action")
-        bb.append(cancel); bb.append(save); actions.add(bb); page.add(g); page.add(actions)
-        dlg.add(page)
+        page.add(g)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_vexpand(True); scroll.set_child(page)
+        tv.set_content(scroll)
+        dlg.set_content(tv)
 
         def do_save(*_a) -> None:
             from datetime import datetime

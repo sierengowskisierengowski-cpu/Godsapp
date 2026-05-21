@@ -32,10 +32,15 @@ class FindingsView(Gtk.Box):
         refresh_btn.add_css_class("flat")
         refresh_btn.connect("clicked", lambda *_: self.refresh())
 
+        export_btn = Gtk.Button.new_from_icon_name("document-save-symbolic")
+        export_btn.add_css_class("flat")
+        export_btn.set_tooltip_text("Export filtered findings to CSV")
+        export_btn.connect("clicked", lambda *_: self._export_csv())
+
         self.append(page_header(
             "Findings Manager",
             on_settings=lambda: open_settings(parent, "findings"),
-            trailing=[refresh_btn],
+            trailing=[export_btn, refresh_btn],
             subtitle="Every parsed finding across every scan. Filter, triage, and enrich with CVSS / CVE / MITRE.",
         ))
 
@@ -155,6 +160,52 @@ class FindingsView(Gtk.Box):
         row.add_suffix(status_lbl); row.add_suffix(edit_btn)
         return row
 
+    # ── csv export ────────────────────────────────────────────────────────
+    def _export_csv(self) -> None:
+        """Write the currently-filtered finding list to a CSV in the user's
+        evidence dir and surface a toast with the path."""
+        import csv
+        from datetime import datetime
+        from godsapp.core import paths
+        sev = _SEVERITIES[self._sev_dd.get_selected()]
+        st = _STATUSES[self._status_dd.get_selected()]
+        q = (self._search.get_text() or "").lower().strip()
+        out_rows = []
+        for row in sorted(self._rows_data, key=lambda r: _SEV_ORDER.get(r["severity"], 9)):
+            if sev != "all" and row["severity"] != sev: continue
+            if st != "all" and row["status"] != st: continue
+            if q:
+                blob = " ".join(str(x) for x in (
+                    row["title"], row["host"], row["tool"], row["workspace"],
+                    row["cve_ids"] or "", row["tags"] or "")).lower()
+                if q not in blob: continue
+            out_rows.append(row)
+        out_dir = paths.EVIDENCE_DIR / "exports"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        out_path = out_dir / f"findings-{stamp}.csv"
+        cols = ["created_at", "severity", "status", "workspace", "tool", "category",
+                "host", "port", "service", "title", "cvss_score", "cve_ids",
+                "mitre_technique", "tags", "description"]
+        with out_path.open("w", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            w.writerow(cols)
+            for r in out_rows:
+                w.writerow([
+                    r["created_at"].isoformat() if r["created_at"] else "",
+                    r["severity"], r["status"], r["workspace"], r["tool"], r["category"],
+                    r["host"] or "", r["port"] or "", r["service"] or "",
+                    r["title"], r["cvss_score"] or "", r["cve_ids"] or "",
+                    r["mitre_technique"] or "", r["tags"] or "",
+                    (r["description"] or "").replace("\n", " ").strip(),
+                ])
+        toaster = getattr(self._parent, "_toast_overlay", None)
+        msg = f"Exported {len(out_rows)} findings → {out_path}"
+        if toaster is not None:
+            toaster.add_toast(Adw.Toast(title=msg))
+        if hasattr(self._parent, "_set_status_text"):
+            self._parent._set_status_text(msg)
+
     # ── editor ────────────────────────────────────────────────────────────
     def _open_edit(self, finding_id: str) -> None:
         with get_session() as s:
@@ -170,9 +221,17 @@ class FindingsView(Gtk.Box):
                 "tags": getattr(f, "tags", None) or "",
                 "description": f.description or "",
             }
-        dlg = Adw.PreferencesWindow(transient_for=self._parent, modal=True)
+        dlg = Adw.Window(transient_for=self._parent, modal=True)
         dlg.set_title(f"Edit finding · {current['title'][:60]}")
-        dlg.set_default_size(560, 540)
+        dlg.set_default_size(560, 560)
+        tv = Adw.ToolbarView()
+        hb = Adw.HeaderBar()
+        btn_save = Gtk.Button(label="Save")
+        btn_save.add_css_class("suggested-action")
+        btn_del = Gtk.Button(label="Delete")
+        btn_del.add_css_class("destructive-action")
+        hb.pack_end(btn_save); hb.pack_start(btn_del)
+        tv.add_top_bar(hb)
         page = Adw.PreferencesPage()
         g = Adw.PreferencesGroup(title="Triage")
 
@@ -223,15 +282,10 @@ class FindingsView(Gtk.Box):
         notes_g.add(notes_scroll)
         page.add(notes_g)
 
-        actions_g = Adw.PreferencesGroup()
-        btn_save = Gtk.Button(label="Save")
-        btn_save.add_css_class("suggested-action")
-        btn_del = Gtk.Button(label="Delete")
-        btn_del.add_css_class("destructive-action")
-        bb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8, halign=Gtk.Align.END)
-        bb.append(btn_del); bb.append(btn_save)
-        actions_g.add(bb); page.add(actions_g)
-        dlg.add(page)
+        scroll = Gtk.ScrolledWindow()
+        scroll.set_vexpand(True); scroll.set_child(page)
+        tv.set_content(scroll)
+        dlg.set_content(tv)
 
         def save_cb(*_a) -> None:
             new = {

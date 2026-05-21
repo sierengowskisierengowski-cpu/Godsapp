@@ -3,7 +3,7 @@
 Author: Joseph Sierengowski
 """
 
-__version__ = "0.1.0"
+__version__ = "0.3.1"
 __author__ = "Joseph Sierengowski"
 __app_id__ = "com.sierengowski.GodsApp"
 __app_name__ = "GodsApp"

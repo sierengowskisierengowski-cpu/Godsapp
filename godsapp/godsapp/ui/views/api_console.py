@@ -57,10 +57,10 @@ class ApiConsoleView(Gtk.Box):
         regen_btn.connect("clicked", lambda *_: self._regen_token())
         copy_btn = Gtk.Button(label="Copy token")
         copy_btn.connect("clicked", lambda *_: self._copy_token())
+        self.append(token_g)
         bb = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         bb.append(regen_btn); bb.append(copy_btn)
-        wrap = Adw.PreferencesGroup(); wrap.add(bb)
-        self.append(token_g); self.append(wrap)
+        self.append(bb)
 
         # Log tail
         log_label = Gtk.Label(label="Recent API log lines", xalign=0)

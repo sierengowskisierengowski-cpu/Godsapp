@@ -243,17 +243,18 @@ class SettingsView(Gtk.Box):
             self._unsaved_widgets[(key, path)] = packed
             group.add(row)
 
-        save_group = Adw.PreferencesGroup()
         save_btn = Gtk.Button(label="Save settings")
         save_btn.add_css_class("suggested-action")
         save_btn.set_halign(Gtk.Align.START)
         save_btn.connect("clicked", lambda *_: self._save())
-        wrap = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        wrap.set_margin_top(8); wrap.append(save_btn)
-        self._status_lbl = getattr(self, "_status_lbl", Gtk.Label(label="", xalign=0))
-        self._status_lbl.add_css_class("dim-label")
-        wrap.append(self._status_lbl)
-        save_group.add(wrap)
+        status_lbl = Gtk.Label(label="", xalign=0)
+        status_lbl.add_css_class("dim-label")
+        self._status_lbl = status_lbl
+        save_row = Adw.ActionRow()
+        save_row.add_prefix(save_btn)
+        save_row.add_suffix(status_lbl)
+        save_group = Adw.PreferencesGroup()
+        save_group.add(save_row)
         outer.add(save_group)
         return outer
 

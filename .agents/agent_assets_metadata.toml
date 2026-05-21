@@ -12,3 +12,15 @@ id = "lm-WjXXkd3G5S6vGLDUib"
 uri = "file://godsapp-v0.3.0.zip"
 type = "unspecified"
 title = "GodsApp v0.3.0 — ZIP (fixed installer)"
+
+[[outputs]]
+id = "mwEpkwtn_u2BewhHv-hD3"
+uri = "file://godsapp-v0.3.1.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.3.1 — Olympus polish (tarball)"
+
+[[outputs]]
+id = "F4ajzMpCFQFDD4YENuwZa"
+uri = "file://godsapp-v0.3.1.zip"
+type = "unspecified"
+title = "GodsApp v0.3.1 — Olympus polish (zip)"

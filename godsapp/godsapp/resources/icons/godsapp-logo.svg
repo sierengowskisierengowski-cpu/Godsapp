@@ -1,46 +1,64 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- GodsApp logo: cloud with a lightning bolt punched through it.
-     Cream / ivory palette to match the in-app theme. Author: Joseph Sierengowski. -->
+<!-- GodsApp logo: Olympian cloud pierced by a divine bolt.
+     Cloud-white + sky-blue + Olympus-gold to match the in-app theme.
+     Author: Joseph Sierengowski. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <linearGradient id="cloudGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="#fdfaf2"/>
-      <stop offset="60%"  stop-color="#ebd7af"/>
-      <stop offset="100%" stop-color="#d4b87a"/>
-    </linearGradient>
+    <radialGradient id="cloudGrad" cx="50%" cy="40%" r="65%">
+      <stop offset="0%"   stop-color="#ffffff"/>
+      <stop offset="55%"  stop-color="#e7f0fb"/>
+      <stop offset="100%" stop-color="#9fbfdf"/>
+    </radialGradient>
     <linearGradient id="boltGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"   stop-color="#fdfaf2"/>
-      <stop offset="100%" stop-color="#d4b87a"/>
+      <stop offset="0%"   stop-color="#fff7d6"/>
+      <stop offset="55%"  stop-color="#f2cf6a"/>
+      <stop offset="100%" stop-color="#c79a2c"/>
     </linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="2.4" result="b"/>
+    <linearGradient id="skyHalo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#bfe0ff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#bfe0ff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="boltGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.8" result="b"/>
       <feMerge>
         <feMergeNode in="b"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
+    <filter id="cloudShade" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.4"/>
+    </filter>
   </defs>
+
+  <!-- soft sky halo behind the cloud -->
+  <ellipse cx="64" cy="62" rx="58" ry="36" fill="url(#skyHalo)"/>
+
   <!-- cloud body -->
-  <path d="M30 84
-           Q14 84 14 68
-           Q14 52 32 50
-           Q36 32 56 32
-           Q80 32 84 54
-           Q108 54 108 72
-           Q108 84 92 84 Z"
+  <path d="M30 86
+           Q12 86 12 68
+           Q12 50 32 48
+           Q36 28 58 28
+           Q82 28 86 52
+           Q112 52 112 72
+           Q112 86 94 86 Z"
         fill="url(#cloudGrad)"
-        stroke="#4a3a28" stroke-width="2.5"
+        stroke="#7aa0c8" stroke-width="2"
         stroke-linejoin="round"/>
-  <!-- lightning bolt (through the cloud) -->
-  <path d="M70 38
-           L46 78
+
+  <!-- cloud underbelly shadow -->
+  <path d="M28 82 Q64 96 100 82 Q92 90 64 90 Q36 90 28 82 Z"
+        fill="#7fa5cf" opacity="0.18" filter="url(#cloudShade)"/>
+
+  <!-- lightning bolt -->
+  <path d="M72 32
+           L44 78
            L62 78
-           L54 104
-           L86 64
-           L70 64
-           L78 38 Z"
+           L52 110
+           L90 60
+           L72 60
+           L82 32 Z"
         fill="url(#boltGrad)"
-        stroke="#4a3a28" stroke-width="2"
+        stroke="#7a5a17" stroke-width="1.8"
         stroke-linejoin="round"
-        filter="url(#glow)"/>
+        filter="url(#boltGlow)"/>
 </svg>

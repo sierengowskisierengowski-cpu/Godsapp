@@ -106,7 +106,11 @@ class GodsAppApplication(Adw.Application):
 
         add("quit", self.quit)
         add("about", self._show_about)
+        add("palette", lambda: self._window.open_command_palette() if self._window else None)
+        add("refresh", lambda: self._window.refresh_current() if self._window else None)
         self.set_accels_for_action("app.quit", ["<Primary>q"])
+        self.set_accels_for_action("app.palette", ["<Primary>k"])
+        self.set_accels_for_action("app.refresh", ["F5"])
 
     def _show_about(self) -> None:
         about = Adw.AboutWindow(
