@@ -150,6 +150,24 @@ class TemplatesSettings(BaseModel):
     confirm_before_apply: bool = True
 
 
+class UpdatesSettings(BaseModel):
+    """In-app updater (GitHub Releases feed)."""
+    auto_check: bool = True
+    check_interval_hours: int = 24
+    include_prereleases: bool = False
+    # Skip pkexec / system install and install under ~/.local instead.
+    user_scope: bool = False
+    # Optional override — point at a self-hosted GitHub-compatible
+    # releases JSON feed (e.g. Gitea / a static mirror).
+    feed_url: str = ""
+    # Persisted by core.updater after every check.
+    last_check_at: str = ""
+    last_seen_version: str = ""
+    # If non-empty, skip notifications for this version (user clicked
+    # "Skip this version" on the update toast/dialog).
+    skipped_version: str = ""
+
+
 class DedupSettings(BaseModel):
     """Stored as integer percentages (0–100) so the Settings UI int spin row
     renders the same values the user sees. Callers convert to 0–1 floats."""
@@ -175,6 +193,7 @@ class Settings(BaseModel):
     templates: TemplatesSettings = Field(default_factory=TemplatesSettings)
     dedup: DedupSettings = Field(default_factory=DedupSettings)
     tool_paths: ToolPathsSettings = Field(default_factory=ToolPathsSettings)
+    updates: UpdatesSettings = Field(default_factory=UpdatesSettings)
     categories: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 

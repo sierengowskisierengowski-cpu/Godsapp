@@ -54,6 +54,10 @@ class GodsAppApplication(Adw.Application):
         except Exception:
             log.exception("scheduler failed to start")
 
+        # Background update check (cheap — single HTTP request, throttled
+        # by Settings.updates.check_interval_hours, default 24h).
+        self._maybe_check_for_updates_in_background()
+
     def do_activate(self) -> None:  # type: ignore[override]
         if self._window is not None:
             self._window.present()
@@ -117,9 +121,53 @@ class GodsAppApplication(Adw.Application):
         add("about", self._show_about)
         add("palette", lambda: self._window.open_command_palette() if self._window else None)
         add("refresh", lambda: self._window.refresh_current() if self._window else None)
+        add("check-for-updates", self._show_updater)
         self.set_accels_for_action("app.quit", ["<Primary>q"])
         self.set_accels_for_action("app.palette", ["<Primary>k"])
         self.set_accels_for_action("app.refresh", ["F5"])
+
+    # ── updates ─────────────────────────────────────────────────────────
+    def _show_updater(self, preloaded=None) -> None:
+        try:
+            from godsapp.ui.updater_dialog import show_updater
+            show_updater(self._window, preloaded=preloaded)
+        except Exception:
+            log.exception("failed to open updater dialog")
+
+    def _maybe_check_for_updates_in_background(self) -> None:
+        import threading
+        try:
+            from godsapp.core import updater as updater_core
+        except Exception:
+            log.exception("updater module failed to import")
+            return
+        if not updater_core.should_auto_check():
+            return
+
+        def _worker() -> None:
+            result = updater_core.check_for_update()
+            if (result.info is not None
+                    and result.info.version != load_settings().updates.skipped_version):
+                # Hop back to the main loop and surface a toast.
+                def _notify() -> bool:
+                    if self._window is None:
+                        return False
+                    toaster = getattr(self._window, "_toast_overlay", None)
+                    info = result.info
+                    toast = Adw.Toast(
+                        title=f"GodsApp v{info.version} is available",
+                        button_label="Update…",
+                        timeout=10,
+                    )
+                    toast.connect("button-clicked",
+                                  lambda *_: self._show_updater(preloaded=result))
+                    if toaster is not None:
+                        toaster.add_toast(toast)
+                    return False
+                GLib.idle_add(_notify)
+
+        threading.Thread(target=_worker, daemon=True,
+                         name="godsapp-update-check").start()
 
     def _show_about(self) -> None:
         about = Adw.AboutWindow(

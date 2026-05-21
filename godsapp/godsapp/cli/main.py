@@ -210,5 +210,63 @@ def health() -> None:
     }, indent=2))
 
 
+# ─── updates ────────────────────────────────────────────────────────────────
+
+@cli.group("update", help="In-app updater.")
+def update_grp() -> None: ...
+
+
+@update_grp.command("check", help="Check GitHub Releases for a newer version.")
+@click.option("--include-prereleases", is_flag=True, default=None)
+def update_check(include_prereleases: bool | None) -> None:
+    from godsapp.core import updater as upd
+    r = upd.check_for_update(allow_prerelease=include_prereleases)
+    if r.error:
+        console.print(f"[red]error:[/] {r.error}"); sys.exit(2)
+    if r.info is None:
+        console.print(f"[green]up to date[/] (v{r.current_version})"); return
+    console.print(f"[yellow]update available:[/] v{r.info.version} "
+                  f"(you have v{r.current_version})")
+    console.print(f"  asset:  {r.info.asset_name}")
+    console.print(f"  size:   {r.info.asset_size} bytes")
+    console.print(f"  notes:\n{r.info.notes[:600]}")
+
+
+@update_grp.command("install", help="Download and install the latest release.")
+@click.option("--user", "user_scope", is_flag=True, help="Install under ~/.local (no pkexec).")
+@click.option("--include-prereleases", is_flag=True, default=None)
+def update_install(user_scope: bool, include_prereleases: bool | None) -> None:
+    from godsapp.core import updater as upd
+    r = upd.check_for_update(allow_prerelease=include_prereleases)
+    if r.error:
+        console.print(f"[red]error:[/] {r.error}"); sys.exit(2)
+    if r.info is None:
+        console.print(f"[green]already up to date[/] (v{r.current_version})"); return
+
+    last_bytes = [-1]
+    def _cb(p: upd._Progress) -> None:
+        if p.bytes_total and p.bytes_done != last_bytes[0]:
+            pct = 100 * p.bytes_done // max(1, p.bytes_total)
+            console.print(f"  [{p.stage}] {pct}%", end="\r")
+            last_bytes[0] = p.bytes_done
+        else:
+            console.print(f"  [{p.stage}] {p.message}")
+
+    console.print(f"installing v{r.info.version} → {r.info.asset_name}")
+    inst = upd.download_and_install(r.info, user_scope=user_scope, progress_cb=_cb)
+    while inst.poll() is None:
+        try:
+            import time; time.sleep(0.5)
+        except KeyboardInterrupt:
+            inst.cancel(); console.print("[red]cancelled[/]"); sys.exit(130)
+    rc = inst.poll() or 0
+    if rc == 0:
+        console.print(f"[green]install complete[/] — relaunch godsapp to use v{r.info.version}")
+    else:
+        console.print(f"[red]install failed (rc={rc})[/]")
+        console.print(f"log: {inst.log_path}")
+        sys.exit(rc)
+
+
 if __name__ == "__main__":
     cli()

@@ -2,6 +2,19 @@
 
 All notable changes to GodsApp.
 
+## [0.6.0] — 2026-05-21
+
+### In-app updater
+
+- New `core/updater.py` — checks the GitHub Releases feed (default `sierengowskisierengowski-cpu/Godsapp`, overridable via `Settings.updates.feed_url`), compares semver with pre-release awareness, downloads the published `godsapp-X.Y.Z.tar.gz` asset, verifies an optional sibling `.sha256`, extracts safely (refuses path-traversing tar entries), and runs `install.sh` under `pkexec` (or `--user` when `updates.user_scope` is on).
+- `UpdaterDialog` (`ui/updater_dialog.py`) — "Check now" button → release notes + size + publish date → "Download and install" with a real progress bar driven from a worker thread via `GLib.idle_add`. Subprocess polled in 500 ms ticks; cancelling the dialog terminates the install.
+- Application bootstraps a background check on startup (throttled by `updates.check_interval_hours`, default 24 h). When something newer than the running build is available it surfaces an `Adw.Toast` with an "Update…" button that opens the dialog with the result already preloaded — no second round-trip.
+- `Settings → Updates` sub-page: auto-check toggle, interval, include-prereleases, user-scope install, custom feed URL, read-only last-checked / last-seen / skipped-version fields.
+- New `godsapp-cli update check` and `godsapp-cli update install [--user]` subcommands — same flow, headless, with a progress callback printed to stderr.
+- New `app.check-for-updates` GAction so the updater can be triggered from anywhere (menu, palette, slash command, etc.).
+
+Tarballs: `./dist/godsapp-0.6.0.tar.gz` and `./dist/godsapp-0.6.0.zip`.
+
 ## [0.5.0] — 2026-05-21
 
 ### Missing-tools UX — install guidance, overrides, batch install

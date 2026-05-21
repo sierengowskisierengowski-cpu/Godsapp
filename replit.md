@@ -75,7 +75,20 @@ The only other thing in the workspace is `artifacts/mockup-sandbox/` — Replit 
 - The systemd user unit needs `Environment=PYTHONPATH=/opt/godsapp/app` if the launcher is bypassed; the bundled launcher (`/usr/local/bin/godsapp`) calls the venv binary directly, so PYTHONPATH is only used as a belt-and-suspenders.
 - On Debian/Ubuntu, `gir1.2-adw-1` is sometimes named `gir1.2-libadwaita-1` on older releases; the installer surfaces a clear error if it can't import `Adw`.
 
-## Status — v0.5.0 (latest)
+## Status — v0.6.0 (latest)
+
+**In-app updater.**
+
+- **`core/updater.py`** — stdlib-only (urllib) check against the GitHub Releases feed for `sierengowskisierengowski-cpu/Godsapp`. Override via `Settings.updates.feed_url` for self-hosted mirrors. Picks first non-draft release matching the channel (stable or include-prereleases), grabs the `godsapp-*.tar.gz` asset, optionally verifies a sibling `.sha256`, and runs `install.sh` under `pkexec` (or `--user` if `updates.user_scope`). Pre-release-aware semver comparator (`is_newer`). `should_auto_check()` throttles checks by `check_interval_hours` (default 24 h).
+- **`ui/updater_dialog.py`** — three states (idle / up-to-date / update-available). Worker thread does HTTP + tarball download + extraction + install spawn; main loop polls subprocess every 500 ms via `GLib.timeout_add` and pulses an `Adw.ProgressBar`. Closing the dialog cancels everything (`InstallProcess.cancel()`). Safe extraction refuses path-traversing tar entries.
+- **App startup** does a background check after scheduler init. When newer than the running build (and not equal to `updates.skipped_version`) it surfaces an `Adw.Toast` with an "Update…" button → opens the dialog with the result preloaded.
+- **Settings → Updates** sub-page: auto-check toggle, interval (1–720h), include-prereleases, user-scope install, custom feed URL, read-only fields for last-checked / last-seen / skipped-version.
+- **CLI**: `godsapp-cli update check` (exit 0 up-to-date, 2 on error) and `godsapp-cli update install [--user] [--include-prereleases]` — same backend, with progress printed to stderr.
+- **GAction `app.check-for-updates`** registered so palette / menu / slash commands can trigger the dialog.
+
+Tarballs: `./dist/godsapp-0.6.0.tar.gz` and `./dist/godsapp-0.6.0.zip`.
+
+## Status — v0.5.0
 
 **Missing-tools UX: install guidance + per-tool overrides.**
 

@@ -133,6 +133,28 @@ SYSTEM_PAGES: list[dict[str, Any]] = [
         ],
     },
     {
+        "key": "updates", "title": "Updates", "icon": "software-update-available-symbolic",
+        "subtitle": "Check GitHub Releases for newer GodsApp versions.",
+        "fields": [
+            ("updates.auto_check",           "Check for updates automatically",
+                "bool", True, None, None),
+            ("updates.check_interval_hours", "Check interval (hours)",
+                "int",  24, (1, 720), None),
+            ("updates.include_prereleases",  "Include pre-releases (alpha/beta/rc)",
+                "bool", False, None, None),
+            ("updates.user_scope",           "Install to ~/.local (skip pkexec)",
+                "bool", False, None, None),
+            ("updates.feed_url",             "Custom releases feed URL (optional)",
+                "text", "", None, None),
+            ("updates.last_check_at",        "Last checked (read-only)",
+                "text", "", None, None),
+            ("updates.last_seen_version",    "Last seen version (read-only)",
+                "text", "", None, None),
+            ("updates.skipped_version",      "Skipped version (clear to re-prompt)",
+                "text", "", None, None),
+        ],
+    },
+    {
         "key": "plugins", "title": "Plugins", "icon": "application-x-addon-symbolic",
         "subtitle": "Plugin loader policy.",
         "fields": [
