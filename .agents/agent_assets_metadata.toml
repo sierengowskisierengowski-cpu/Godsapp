@@ -84,3 +84,15 @@ id = "y42biPrin-eskmTygH4DS"
 uri = "file://godsapp-v0.3.6.zip"
 type = "unspecified"
 title = "GodsApp v0.3.6 (zip)"
+
+[[outputs]]
+id = "Diy7_OXE2u3aXRSdbiIvN"
+uri = "file://godsapp-v0.3.7.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.3.7 — Live Background Storm"
+
+[[outputs]]
+id = "VCaVvUEEq6--qAEKB5r2J"
+uri = "file://godsapp-v0.3.7.zip"
+type = "unspecified"
+title = "GodsApp v0.3.7 (zip)"

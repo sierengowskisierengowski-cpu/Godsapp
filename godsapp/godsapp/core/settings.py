@@ -40,6 +40,7 @@ class UISettings(BaseModel):
     auto_fade_pulse_seconds: int = 6
     show_splash: bool = True
     sounds_enabled: bool = True
+    background_storm: bool = True
 
 
 class DatabaseSettings(BaseModel):

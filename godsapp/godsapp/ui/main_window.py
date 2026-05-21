@@ -19,6 +19,7 @@ from godsapp.core.settings import load_settings
 from godsapp.tools import registry
 from godsapp.ui.command_palette import CommandPalette, build_commands
 from godsapp.ui.sidebar import Sidebar
+from godsapp.ui.storm import LightningOverlay
 from godsapp.ui.views.api_console import ApiConsoleView
 from godsapp.ui.views.dashboard import DashboardView
 from godsapp.ui.views.evidence import EvidenceView
@@ -161,7 +162,15 @@ class MainWindow(Adw.ApplicationWindow):
         toolbar_view = Adw.ToolbarView()
         toolbar_view.add_top_bar(header)
         toolbar_view.set_content(body)
-        self.set_content(toolbar_view)
+
+        # Live background lightning storm — transparent click-through Cairo
+        # overlay painting random bolts + brief flash veils across the entire
+        # window. The baked-CSS sky stays intact; the storm paints ON TOP.
+        root_overlay = Gtk.Overlay()
+        root_overlay.set_child(toolbar_view)
+        self._storm = LightningOverlay()
+        root_overlay.add_overlay(self._storm)
+        self.set_content(root_overlay)
 
         # Health refresh
         self._refresh_health()

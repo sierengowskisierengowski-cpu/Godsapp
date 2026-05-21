@@ -37,6 +37,8 @@ SYSTEM_PAGES: list[dict[str, Any]] = [
             ("ui.show_splash",            "Show splash on launch", "bool", True, None, None),
             ("ui.sounds_enabled",         "Splash sound effects (thunder)", "bool", True,
                 "Plays a cinematic thunder rumble during the startup splash. Requires paplay, pw-play, aplay, ffplay, or mpv on the system.", None),
+            ("ui.background_storm",       "Live background lightning storm", "bool", True,
+                "Random lightning bolts strike across the main window every 15–40 seconds with a faint distant thunder rumble. Turn off for total silence.", None),
             ("database.url",              "Database URL (blank = SQLite)", "text", "", None, None),
         ],
     },
