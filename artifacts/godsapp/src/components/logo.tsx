@@ -48,9 +48,10 @@ export function GodsAppLogo({ size = 32, showText = true, className, textClassNa
   }, [zap]);
 
   const glowIntensity = [0, 0.3, 0.7, 1][zapLevel];
-  const boltColor = zapLevel === 0 ? "#22d3ee" : zapLevel === 1 ? "#67e8f9" : zapLevel === 2 ? "#a5f3fc" : "#ffffff";
+  // Cream/ivory bolt: resting=warm gold, level1=ivory, level2=off-white cream, level3=pure white
+  const boltColor = zapLevel === 0 ? "#d4b87a" : zapLevel === 1 ? "#e0c494" : zapLevel === 2 ? "#eeddbf" : "#ffffff";
   const boltFilter = zapLevel > 0
-    ? `drop-shadow(0 0 ${4 + zapLevel * 5}px ${boltColor}) drop-shadow(0 0 ${2 + zapLevel * 3}px #22d3ee)`
+    ? `drop-shadow(0 0 ${4 + zapLevel * 5}px ${boltColor}) drop-shadow(0 0 ${2 + zapLevel * 3}px #c9a85c)`
     : "none";
 
   return (
@@ -79,17 +80,17 @@ export function GodsAppLogo({ size = 32, showText = true, className, textClassNa
           {/* Cloud body */}
           <path
             d="M18 67 Q14 67 12 63 Q10 59 13 55 Q11 51 14 48 Q17 45 21 46 Q22 39 28 36 Q35 33 41 37 Q44 31 51 29 Q59 27 65 33 Q70 30 76 34 Q82 38 81 45 Q87 45 89 51 Q91 58 86 62 Q83 66 78 66 Z"
-            fill="#0d3850"
-            stroke="#1e6080"
+            fill="#1a1610"
+            stroke="#3a2e1e"
             strokeWidth="1.5"
             strokeLinejoin="round"
           />
-          {/* Cloud highlight top edge */}
+          {/* Cloud highlight top edge — warm cream shimmer */}
           <path
             d="M41 37 Q44 31 51 29 Q59 27 65 33"
-            stroke="#2dd4bf"
+            stroke="#d4b87a"
             strokeWidth="1"
-            opacity="0.4"
+            opacity="0.38"
             strokeLinecap="round"
           />
           {/* Glow halo behind bolt when zapping */}
@@ -114,18 +115,18 @@ export function GodsAppLogo({ size = 32, showText = true, className, textClassNa
           <polygon
             points="59,30 46,55 56,55 47,80 68,50 57,50"
             fill="none"
-            stroke={zapLevel > 1 ? "#ffffff" : "#a5f3fc"}
+            stroke={zapLevel > 1 ? "#ffffff" : "#e8d5a8"}
             strokeWidth={zapLevel > 0 ? "1.5" : "0.8"}
             strokeLinejoin="round"
-            opacity={zapLevel > 0 ? 0.8 : 0.35}
+            opacity={zapLevel > 0 ? 0.75 : 0.30}
             style={{ transition: "all 0.1s" }}
           />
           {/* Spark dots at bolt tip when fully zapping */}
           {zapLevel >= 2 && (
             <>
-              <circle cx="47" cy="80" r="2" fill="#ffffff" opacity="0.9" />
-              <circle cx="43" cy="76" r="1.2" fill="#a5f3fc" opacity="0.7" />
-              <circle cx="51" cy="84" r="1" fill="#67e8f9" opacity="0.6" />
+              <circle cx="47" cy="80" r="2"   fill="#ffffff"  opacity="0.90" />
+              <circle cx="43" cy="76" r="1.2" fill="#eeddbf"  opacity="0.75" />
+              <circle cx="51" cy="84" r="1"   fill="#d4b87a"  opacity="0.65" />
             </>
           )}
         </svg>

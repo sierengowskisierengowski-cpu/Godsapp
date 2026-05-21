@@ -119,18 +119,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       "flex items-center gap-2.5 rounded-md px-2 py-1.5 mb-0.5 transition-all duration-150 group relative",
                       collapsed ? "justify-center px-1.5" : "",
                       isActive
-                        ? "bg-primary/10 border border-primary/20 shadow-[0_0_8px_rgba(34,211,238,0.1)]"
+                        ? "bg-primary/10 border border-primary/20 shadow-[0_0_10px_rgba(224,196,148,0.10)]"
                         : "border border-transparent glass-hover"
                     )}
                     title={collapsed ? item.label : undefined}
                   >
                     {/* Active left accent bar */}
                     {isActive && !collapsed && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary shadow-[0_0_6px_theme(colors.cyan.400)]" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-primary shadow-[0_0_8px_rgba(224,196,148,0.80)]" />
                     )}
                     <Icon className={cn(
                       "h-4 w-4 flex-shrink-0 transition-all duration-150",
-                      isActive ? "text-primary drop-shadow-[0_0_6px_theme(colors.cyan.400)]" : "text-muted-foreground group-hover:text-primary"
+                      isActive ? "text-primary drop-shadow-[0_0_7px_rgba(224,196,148,0.75)]" : "text-muted-foreground group-hover:text-primary"
                     )} />
                     {!collapsed && (
                       <MatrixNavLabel
