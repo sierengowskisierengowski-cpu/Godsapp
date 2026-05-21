@@ -1,35 +1,13 @@
-import { useEffect } from "react";
-import { useLocation } from "wouter";
 import { useGetSession, useGetSetupStatus } from "@workspace/api-client-react";
 import { Spinner } from "@/components/ui/spinner";
+import SetupPage from "@/pages/setup";
+import LockPage from "@/pages/lock";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-  const [, setLocation] = useLocation();
   const { data: setupStatus, isLoading: isLoadingSetup } = useGetSetupStatus();
   const { data: session, isLoading: isLoadingSession, error } = useGetSession({
-    query: {
-      retry: false,
-    }
+    query: { retry: false }
   });
-
-  useEffect(() => {
-    if (isLoadingSetup || isLoadingSession) return;
-
-    if (setupStatus && !setupStatus.completed) {
-      setLocation("/setup");
-      return;
-    }
-
-    if (error || !session?.authenticated) {
-      setLocation("/lock");
-      return;
-    }
-    
-    if (session?.locked) {
-      setLocation("/lock");
-      return;
-    }
-  }, [setupStatus, session, isLoadingSetup, isLoadingSession, error, setLocation]);
 
   if (isLoadingSetup || isLoadingSession) {
     return (
@@ -39,8 +17,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!setupStatus?.completed || !session?.authenticated || session?.locked) {
-    return null; // Will redirect in effect
+  if (setupStatus && !setupStatus.completed) {
+    return <SetupPage />;
+  }
+
+  if (error || !session?.authenticated || session?.locked) {
+    return <LockPage />;
   }
 
   return <>{children}</>;
