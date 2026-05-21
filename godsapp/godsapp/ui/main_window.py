@@ -202,8 +202,19 @@ class MainWindow(Adw.ApplicationWindow):
             pass
 
     def open_command_palette(self) -> None:
+        # Guard against double-fire (Ctrl+K is bound via both app accel and a
+        # window ShortcutController — if both fire we'd stack two palettes).
+        existing = getattr(self, "_palette_open", None)
+        if existing is not None:
+            try:
+                existing.present()
+                return
+            except Exception:
+                self._palette_open = None
         cmds = build_commands(PINNED_ITEMS, CATEGORY_LABELS)
         palette = CommandPalette(self, cmds, on_pick=self._on_palette_pick)
+        self._palette_open = palette
+        palette.connect("close-request", lambda *_: (setattr(self, "_palette_open", None), False)[1])
         palette.present()
 
     def refresh_current(self) -> None:

@@ -60,3 +60,15 @@ id = "K_ix391yBu1RZulFAn2jb"
 uri = "file://godsapp-v0.3.4.zip"
 type = "unspecified"
 title = "GodsApp v0.3.4 — baked sky + packaging fix + markup fix (zip)"
+
+[[outputs]]
+id = "E9crcVhFV50EnYjJnxLUw"
+uri = "file://godsapp-v0.3.5.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.3.5 — palette double-fire guard (tarball)"
+
+[[outputs]]
+id = "URZn7tfeqqiOz9iWc2W3T"
+uri = "file://godsapp-v0.3.5.zip"
+type = "unspecified"
+title = "GodsApp v0.3.5 — palette double-fire guard (zip)"
