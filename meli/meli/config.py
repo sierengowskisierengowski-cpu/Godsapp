@@ -130,6 +130,10 @@ DEFAULTS: dict[str, Any] = {
         "window_maximized": False,
         "sidebar_width": 220,
     },
+    "splash": {
+        "enabled": True,
+        "sound_enabled": True,
+    },
 }
 
 

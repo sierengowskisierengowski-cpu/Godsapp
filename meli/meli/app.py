@@ -32,19 +32,51 @@ class MeliApplication(Adw.Application):
 
     def _on_activate(self, app: Adw.Application) -> None:
         from meli.ui.main_window import MeliMainWindow
+        from meli.config import get_config
 
         if self._main_window is None:
             self._main_window = MeliMainWindow(application=app)
+
+            # Present the main window first so the compositor has a
+            # parent surface to anchor the modal splash to. Without
+            # this the splash can appear unparented on Wayland and
+            # lose focus / z-order to other windows.
             self._main_window.present()
 
-            if not is_setup_complete():
-                log.info("First launch — showing setup wizard")
-                GLib.idle_add(self._show_setup_wizard)
+            cfg = get_config()
+            splash_enabled = cfg.get("splash", "enabled", default=True)
+
+            if splash_enabled:
+                from meli.ui.splash_screen import SplashScreen
+                splash = SplashScreen(
+                    application=app,
+                    transient_for=self._main_window,
+                )
+                splash.connect("splash-finished", lambda *_: self._after_splash())
+                splash.present()
             else:
-                log.info("Setup complete — showing lock screen")
-                GLib.idle_add(self._main_window.show_lock_screen)
+                self._post_splash_flow()
         else:
             self._main_window.present()
+
+    def _after_splash(self) -> None:
+        """Called once the splash animation completes."""
+        if self._main_window is None:
+            return
+        # Main window was already presented before the splash; just run
+        # the wizard/lock-screen flow now that the user can see it.
+        self._post_splash_flow()
+
+    def _post_splash_flow(self) -> None:
+        """Show setup wizard on first launch, otherwise the lock screen."""
+        if self._main_window is None:
+            return
+        if not is_setup_complete():
+            log.info("First launch — showing setup wizard")
+            GLib.idle_add(self._show_setup_wizard)
+        else:
+            log.info("Setup complete — showing lock screen")
+            GLib.idle_add(self._main_window.show_lock_screen)
 
     def _show_setup_wizard(self) -> bool:
         from meli.ui.setup_wizard import SetupWizard
