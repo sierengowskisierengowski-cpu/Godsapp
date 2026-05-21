@@ -1,0 +1,1741 @@
+Locked in. Drafting the full spec now.
+
+GodsApp — Professional Security Auditing & Research Suite
+Project Identity
+Name: GodsApp
+Type: Native Linux desktop application
+Author: Joseph Sierengowski
+License: MIT (or specify alternative)
+Repository: New standalone GitHub repository named godsapp
+What GodsApp Is
+GodsApp is a native Linux desktop application that consolidates professional security auditing, network reconnaissance, vulnerability assessment, forensic analysis, threat intelligence, and offensive security tooling into a single integrated environment. It is the desktop equivalent of opening a full security operations room — comparable in scope to Kali Linux's toolset, but unified under one application with shared workspaces, evidence handling, and reporting.
+Every tool in GodsApp operates at full capability. No watered-down versions. No simulated results. No mock data. Every scan produces real output. Every analysis is genuine. Same legal standing as Nmap, Wireshark, Metasploit, and other professional security tools — the tools themselves are legal, the user is solely responsible for ensuring authorization to use them against any target.
+GodsApp is standalone but Meli-aware: if Meli is detected on the system, GodsApp surfaces additional cross-reference features that query Meli's honeypot data.
+Tech Stack
+Frontend: Native GTK4 with PyGObject (Python bindings) and libadwaita for modern controls
+Backend: Python 3.12
+Database: SQLite for local workspace storage with optional PostgreSQL for power users with large datasets
+Background workers: Python threading + asyncio for parallel scans, with systemd user services for long-running daemons
+Plugin system: Python module loading from ~/.config/godsapp/plugins/
+REST API: FastAPI for local programmatic access
+CLI mode: Click-based subcommands sharing the same backend
+Packaging: PyInstaller for binary, with Arch PKGBUILD, .deb, AppImage, and Flatpak targets
+Required Python Libraries
+Core UI:
+
+PyGObject (GTK4 bindings)
+pycairo (drawing)
+pygobject-stubs
+
+Networking & Scanning:
+
+python-nmap (Nmap wrapper)
+scapy (packet manipulation)
+pyshark (Wireshark Python wrapper)
+impacket (network protocols)
+netaddr (IP/network math)
+dnspython (DNS queries)
+python-whois (WHOIS lookups)
+shodan (Shodan API)
+censys (Censys API)
+requests + aiohttp (HTTP)
+httpx (modern HTTP client)
+websocket-client
+
+Vulnerability Assessment:
+
+nuclei-python (Nuclei wrapper) — calls compiled nuclei binary
+python-nessus (if Nessus is available)
+vulners (CVE database)
+searchsploit (Exploit-DB search)
+python-libnmap (Nmap XML parsing)
+
+Web Application Testing:
+
+mitmproxy (HTTP proxy/intercept)
+selenium + playwright (browser automation)
+beautifulsoup4 + lxml (HTML parsing)
+pyjwt (JWT manipulation)
+pycurl
+
+Cryptography & Forensics:
+
+cryptography (modern crypto)
+pycryptodome (legacy crypto algorithms)
+python-gnupg (GPG operations)
+yara-python (YARA rule matching)
+pefile (PE binary analysis)
+pyelftools (ELF binary analysis)
+python-magic (file type detection)
+pypdf (PDF analysis)
+olefile (Office document analysis)
+volatility3 (memory forensics)
+python-evtx (Windows event log analysis)
+
+Wireless:
+
+scapy with dot11 layer (802.11)
+bluepy (Bluetooth LE)
+pybluez (classic Bluetooth)
+
+Password & Hash:
+
+hashlib + passlib (hashing)
+bcrypt
+python-hashID (hash type identification)
+haveibeenpwned (HIBP API)
+
+Threat Intelligence:
+
+abuseipdb (AbuseIPDB API)
+vt-py (VirusTotal API)
+pymisp (MISP integration)
+pyotx (AlienVault OTX)
+otx-python-sdk
+stix2 (STIX format)
+pytaxii2 (TAXII feeds)
+
+OSINT:
+
+holehe (email account finder)
+sherlock (username across sites)
+maigret (advanced username search)
+theHarvester (email/subdomain harvester)
+recon-ng wrappers
+
+Reporting:
+
+reportlab (PDF generation)
+jinja2 (templating)
+markdown
+mdpdf
+openpyxl (Excel reports)
+python-docx (Word reports)
+weasyprint (HTML to PDF)
+
+Database & Storage:
+
+sqlalchemy + alembic
+redis (optional caching)
+
+Security & Auth:
+
+argon2-cffi (password hashing)
+pyotp (TOTP)
+yubikey-manager
+keyring (system keyring integration)
+
+Plugin & API:
+
+importlib (plugin loading)
+fastapi + uvicorn (REST API)
+click (CLI)
+watchdog (filesystem monitoring for plugins)
+
+Utilities:
+
+rich (terminal output formatting for CLI mode)
+structlog (structured logging)
+pyyaml + toml
+psutil
+python-dotenv
+
+Required System Packages
+Core tools (binaries GodsApp shells out to):
+
+nmap
+masscan
+nuclei
+metasploit-framework
+hydra
+john (John the Ripper)
+hashcat
+aircrack-ng
+wireshark-cli + tshark
+tcpdump
+sqlmap
+nikto
+gobuster
+ffuf
+wpscan
+enum4linux
+responder
+bloodhound
+exiftool
+binwalk
+volatility3
+yara
+radare2
+gdb
+ltrace + strace
+netcat (openbsd-netcat or ncat)
+proxychains-ng
+tor
+macchanger
+iw + wpa_supplicant
+bluez
+bluez-utils
+usbutils
+pciutils
+
+System libraries:
+
+python3.12
+python3-gi
+gtk4
+libadwaita
+libpcap
+libssh
+libssl
+
+File and Folder Structure
+godsapp/
+├── README.md
+├── LICENSE
+├── INSTALL.md
+├── ARCHITECTURE.md
+├── API.md
+├── PLUGIN_DEVELOPMENT.md
+├── CONTRIBUTING.md
+├── CHANGELOG.md
+├── SECURITY.md
+├── DISCLAIMER.md
+├── PKGBUILD
+├── setup.py
+├── pyproject.toml
+├── requirements.txt
+├── packages.txt
+├── install.sh
+├── uninstall.sh
+├── godsapp.desktop
+├── godsapp.service (systemd user unit for background daemon)
+├── godsapp-api.service (REST API service)
+├── assets/
+│   ├── icons/
+│   │   ├── godsapp-16.png ... godsapp-512.png
+│   │   ├── godsapp.svg
+│   │   └── tools/ (per-tool icons)
+│   ├── sounds/
+│   │   ├── scan-complete.ogg
+│   │   ├── finding-critical.ogg
+│   │   ├── finding-high.ogg
+│   │   └── notification.ogg
+│   └── templates/
+│       ├── reports/
+│       └── payloads/
+├── godsapp/
+│   ├── __init__.py
+│   ├── __main__.py
+│   ├── app.py (GTK4 application entry)
+│   ├── cli.py (CLI mode entry)
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── server.py (FastAPI app)
+│   │   ├── routes/
+│   │   ├── auth.py
+│   │   └── schemas.py
+│   ├── auth/
+│   │   ├── __init__.py
+│   │   ├── manager.py
+│   │   ├── totp.py
+│   │   ├── yubikey.py
+│   │   └── audit.py
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── workspace.py (workspace management)
+│   │   ├── evidence.py (evidence locker)
+│   │   ├── scheduler.py (scheduled scans)
+│   │   ├── replay.py (replay engine)
+│   │   ├── plugins.py (plugin loader)
+│   │   ├── meli_bridge.py (Meli integration if detected)
+│   │   └── crypto.py (encryption utilities)
+│   ├── database/
+│   │   ├── __init__.py
+│   │   ├── models.py
+│   │   ├── migrations/
+│   │   └── backup.py
+│   ├── tools/
+│   │   ├── __init__.py
+│   │   ├── network/
+│   │   │   ├── nmap_tool.py
+│   │   │   ├── masscan_tool.py
+│   │   │   ├── arp_scanner.py
+│   │   │   ├── dns_tools.py
+│   │   │   ├── whois_tool.py
+│   │   │   ├── traceroute.py
+│   │   │   ├── port_scanner.py
+│   │   │   └── service_fingerprinter.py
+│   │   ├── web/
+│   │   │   ├── http_inspector.py
+│   │   │   ├── directory_buster.py
+│   │   │   ├── nikto_tool.py
+│   │   │   ├── sqlmap_tool.py
+│   │   │   ├── wpscan_tool.py
+│   │   │   ├── ffuf_tool.py
+│   │   │   ├── gobuster_tool.py
+│   │   │   ├── http_proxy.py
+│   │   │   ├── jwt_analyzer.py
+│   │   │   ├── ssl_analyzer.py
+│   │   │   └── header_analyzer.py
+│   │   ├── vulnerability/
+│   │   │   ├── nuclei_tool.py
+│   │   │   ├── cve_search.py
+│   │   │   ├── exploit_search.py
+│   │   │   └── vulners_lookup.py
+│   │   ├── wireless/
+│   │   │   ├── wifi_scanner.py
+│   │   │   ├── bluetooth_scanner.py
+│   │   │   ├── packet_capture.py
+│   │   │   └── deauth_detector.py
+│   │   ├── password/
+│   │   │   ├── hash_identifier.py
+│   │   │   ├── john_tool.py
+│   │   │   ├── hashcat_tool.py
+│   │   │   ├── hydra_tool.py
+│   │   │   ├── wordlist_manager.py
+│   │   │   └── hibp_check.py
+│   │   ├── forensics/
+│   │   │   ├── file_analyzer.py
+│   │   │   ├── exif_tool.py
+│   │   │   ├── binwalk_tool.py
+│   │   │   ├── yara_scanner.py
+│   │   │   ├── pe_analyzer.py
+│   │   │   ├── elf_analyzer.py
+│   │   │   ├── pdf_analyzer.py
+│   │   │   ├── office_analyzer.py
+│   │   │   ├── memory_analyzer.py
+│   │   │   └── hash_calculator.py
+│   │   ├── intel/
+│   │   │   ├── ip_intel.py
+│   │   │   ├── domain_intel.py
+│   │   │   ├── shodan_tool.py
+│   │   │   ├── censys_tool.py
+│   │   │   ├── threat_feeds.py
+│   │   │   ├── misp_tool.py
+│   │   │   └── otx_tool.py
+│   │   ├── osint/
+│   │   │   ├── email_finder.py
+│   │   │   ├── username_search.py
+│   │   │   ├── subdomain_enum.py
+│   │   │   ├── company_intel.py
+│   │   │   ├── breach_check.py
+│   │   │   └── social_recon.py
+│   │   ├── exploitation/
+│   │   │   ├── metasploit_bridge.py
+│   │   │   ├── payload_generator.py
+│   │   │   ├── reverse_shell_gen.py
+│   │   │   └── listener_manager.py
+│   │   ├── crypto/
+│   │   │   ├── hash_tools.py
+│   │   │   ├── encoder_decoder.py
+│   │   │   ├── cipher_tools.py
+│   │   │   └── certificate_inspector.py
+│   │   └── reporting/
+│   │       ├── findings_manager.py
+│   │       ├── pdf_generator.py
+│   │       ├── markdown_generator.py
+│   │       ├── docx_generator.py
+│   │       ├── xlsx_generator.py
+│   │       └── mitre_mapper.py
+│   ├── ui/
+│   │   ├── __init__.py
+│   │   ├── main_window.py
+│   │   ├── lock_screen.py
+│   │   ├── authorization_gate.py
+│   │   ├── setup_wizard.py
+│   │   ├── views/
+│   │   │   ├── dashboard.py
+│   │   │   ├── workspaces.py
+│   │   │   ├── network_recon.py
+│   │   │   ├── web_testing.py
+│   │   │   ├── vulnerability_scan.py
+│   │   │   ├── wireless.py
+│   │   │   ├── password_attacks.py
+│   │   │   ├── forensics.py
+│   │   │   ├── threat_intel.py
+│   │   │   ├── osint.py
+│   │   │   ├── exploitation.py
+│   │   │   ├── crypto_tools.py
+│   │   │   ├── evidence_locker.py
+│   │   │   ├── findings.py
+│   │   │   ├── replay.py
+│   │   │   ├── scheduler.py
+│   │   │   ├── plugins.py
+│   │   │   ├── api_console.py
+│   │   │   ├── terminal.py (embedded terminal)
+│   │   │   ├── reports.py
+│   │   │   └── settings.py
+│   │   ├── widgets/
+│   │   │   ├── scan_card.py
+│   │   │   ├── finding_card.py
+│   │   │   ├── target_input.py
+│   │   │   ├── progress_indicator.py
+│   │   │   ├── results_table.py
+│   │   │   ├── code_viewer.py
+│   │   │   ├── hex_viewer.py
+│   │   │   ├── network_map.py
+│   │   │   ├── mitre_matrix.py
+│   │   │   └── terminal_widget.py
+│   │   └── dialogs/
+│   │       ├── about.py
+│   │       ├── confirm.py
+│   │       ├── new_workspace.py
+│   │       ├── new_scan.py
+│   │       ├── export_findings.py
+│   │       └── change_password.py
+│   └── utils/
+│       ├── __init__.py
+│       ├── logger.py
+│       ├── shell.py (subprocess wrapper)
+│       ├── network.py
+│       ├── parsers.py
+│       └── helpers.py
+├── plugins/ (built-in plugin examples)
+│   ├── example_plugin.py
+│   └── README.md
+├── tests/
+│   ├── test_workspaces.py
+│   ├── test_evidence.py
+│   ├── test_plugins.py
+│   ├── test_tools/
+│   └── fixtures/
+└── docs/
+    ├── installation.md
+    ├── first-launch.md
+    ├── workspaces.md
+    ├── tools/
+    │   ├── network.md
+    │   ├── web.md
+    │   ├── vulnerability.md
+    │   ├── wireless.md
+    │   ├── password.md
+    │   ├── forensics.md
+    │   ├── intel.md
+    │   ├── osint.md
+    │   └── exploitation.md
+    ├── plugin-development.md
+    ├── api-reference.md
+    ├── cli-reference.md
+    ├── reporting.md
+    ├── mitre-attack.md
+    ├── legal-and-ethics.md
+    └── screenshots/
+Configuration Directory Structure
+~/.config/godsapp/
+├── config.yaml
+├── auth.db (encrypted credentials)
+├── api_keys.enc (encrypted)
+├── plugins/ (user plugin directory)
+└── templates/ (user report/payload templates)
+
+~/.local/share/godsapp/
+├── godsapp.db (main SQLite database)
+├── workspaces/
+│   └── <workspace_uuid>/
+│       ├── workspace.db
+│       ├── evidence/
+│       │   ├── raw/
+│       │   ├── screenshots/
+│       │   ├── captures/
+│       │   └── chain.json (chain of custody log)
+│       ├── reports/
+│       └── notes/
+├── wordlists/
+│   ├── installed/
+│   └── custom/
+├── payloads/
+│   ├── reverse_shells/
+│   ├── web/
+│   └── custom/
+├── tool_outputs/
+│   └── <scan_uuid>/
+├── cache/
+│   ├── enrichment/
+│   ├── cve/
+│   └── nuclei_templates/
+├── logs/
+│   ├── godsapp.log
+│   ├── api.log
+│   ├── audit.log
+│   └── tools/
+└── backups/
+First Launch: Authorization Gate
+Single screen shown once only, never bypassable, before any other UI appears:
+═══════════════════════════════════════════════════════════════
+                    AUTHORIZATION REQUIRED
+═══════════════════════════════════════════════════════════════
+
+GodsApp is a professional security auditing, research, and
+analysis suite. The tools included perform real operations
+against networks, systems, applications, and data.
+
+YOU ARE SOLELY RESPONSIBLE FOR ENSURING YOU HAVE EXPLICIT,
+DOCUMENTED AUTHORIZATION BEFORE USING THESE TOOLS AGAINST ANY
+TARGET YOU DO NOT OWN OR ADMINISTER.
+
+Unauthorized use of these tools may violate computer fraud,
+wiretapping, privacy, intellectual property, and other laws
+in your jurisdiction. Penalties may include criminal
+prosecution, civil liability, and loss of professional
+licensure.
+
+BY CONTINUING, YOU ACKNOWLEDGE:
+
+1. You are a security professional, researcher, or operator
+   acting within the bounds of applicable law.
+2. You will only test systems you own or have written
+   authorization to test.
+3. You assume all legal and ethical responsibility for your
+   use of these tools.
+4. Joseph Sierengowski, contributors, and distributors of
+   GodsApp bear no responsibility for misuse.
+
+═══════════════════════════════════════════════════════════════
+
+[ ] I have read and accept full responsibility
+
+           [ Continue ]              [ Quit ]
+
+Single checkbox required
+"Continue" disabled until checkbox checked
+Timestamp + system identifier logged to audit log
+Never shown again unless ~/.config/godsapp/audit.db is deleted
+Quit closes app without writing anything
+
+Setup Wizard
+After authorization, a multi-step wizard:
+
+Welcome — name, version, author Joseph Sierengowski, brief description
+Master password creation — min 14 chars, complexity meter, confirmation
+2FA setup (optional) — TOTP via QR or YubiKey enrollment
+API key entry (optional) — fields for Shodan, Censys, VirusTotal, AbuseIPDB, GreyNoise, HIBP, MISP, OTX (each skippable)
+System dependency check — scans for nmap, nuclei, hydra, etc. Shows which are present, which are missing, with one-click install commands for the user's distribution
+Wordlist installation (optional) — offers to download SecLists, rockyou, and other common wordlists with progress bars
+Nuclei template install — downloads nuclei community templates
+CVE database init — downloads CVE database for offline lookups
+First workspace creation — creates "Default Workspace" or prompts for custom name
+Meli detection — checks if Meli is installed, displays integration status
+Setup complete — summary, "Launch GodsApp" button
+
+Lock Screen & Authentication
+
+Master password prompt on every launch
+2FA challenge if enabled (TOTP code field or YubiKey touch prompt)
+Shake animation on incorrect password
+3 failed attempts → 60-second lockout
+3 more → 5-minute lockout
+3 more → app closes, writes security event to audit log
+Ctrl+L locks immediately from anywhere
+Auto-lock after configurable idle (default 5 minutes)
+Lock screen shows: last login time, last login source IP, last failed attempts count
+
+Workspaces (Core Concept)
+Every action in GodsApp happens within the context of a Workspace. Workspaces are isolated investigations or engagements.
+Workspace Object
+
+UUID
+Name
+Description
+Client/target organization (optional)
+Scope (in-scope IPs, domains, URLs)
+Out-of-scope (explicitly excluded targets)
+Authorization document (optional file attachment — engagement letter)
+Created date, last activity, status (active/archived)
+Tags
+Color label
+
+Workspace Operations
+
+Create new workspace (with template option)
+Switch active workspace (top bar always shows current workspace)
+Archive workspace (read-only, no new scans)
+Delete workspace (with confirmation, irreversible)
+Export workspace (encrypted archive)
+Import workspace
+Clone workspace (for similar engagements)
+Lock individual workspace (separate password)
+
+Workspace Sidebar
+Every workspace shows in left sidebar:
+
+Workspace name and status
+Scope summary
+Finding counts by severity
+Recent scans
+Recent evidence captures
+Scheduled scans
+Notes count
+
+Evidence Locker
+Every scan, every finding, every artifact automatically captures evidence.
+Evidence Object
+
+Evidence ID (UUID)
+Workspace ID
+Scan ID (if applicable)
+Type (raw_output, screenshot, packet_capture, file, exported_artifact, manual_note)
+Source tool
+Target
+Timestamp captured
+Captured by (user)
+SHA256 hash
+Size
+File path (relative to evidence directory)
+Metadata (JSON: tool version, command args, etc.)
+Chain of custody entries (every access logged)
+
+Chain of Custody
+Every read, copy, export, or modification of evidence is logged:
+json{
+  "evidence_id": "uuid",
+  "timestamp": "ISO 8601",
+  "action": "created|accessed|copied|exported|modified|deleted",
+  "actor": "username",
+  "destination": "where it went (if exported)",
+  "reason": "optional user-provided reason"
+}
+Evidence Locker UI
+
+Browse all evidence in active workspace
+Filter by type, tool, target, date
+Search by hash or filename
+Preview (text, image, hex, packet)
+Export to external location (logged in chain)
+Verify integrity (recompute hash, compare)
+Delete (requires confirmation + reason)
+Generate evidence report (PDF with all metadata, hashes, chain of custody)
+
+Main UI Layout
+Top bar:
+
+GodsApp logo + name
+Current workspace selector (dropdown)
+Global search bar (Ctrl+K)
+Authorization indicator (✓ Authorized as: [username])
+Notification bell
+Lock button
+Settings button
+
+Left sidebar:
+
+Dashboard
+Workspaces
+Network Recon
+Web Testing
+Vulnerability Scanner
+Wireless
+Password Attacks
+Forensics
+Threat Intelligence
+OSINT
+Exploitation
+Crypto Tools
+Evidence Locker
+Findings
+Replay Engine
+Scheduler
+Plugins
+API Console
+Terminal
+Reports
+Settings
+
+Main content area:
+
+Current view
+
+Right sidebar (collapsible):
+
+Active scans/jobs (progress indicators)
+Recent findings
+Notes for current workspace
+Meli integration panel (if Meli detected)
+
+Bottom status bar:
+
+Active workspace name
+CPU/RAM/network usage
+Active scan count
+Tor/proxy status indicator
+VPN status indicator
+API server status (if enabled)
+Notifications
+
+Tool Categories — Every Tool Fully Functional
+Network Reconnaissance
+Nmap Scanner
+
+Target input: single IP, CIDR, range, hostname, file list
+Scan profiles: quick, full, stealth, vuln, OS detection, custom
+Port specification: top N, all, range, list, common services
+Timing template: T0-T5
+NSE scripts: searchable script library with descriptions, multi-select
+OS detection toggle
+Service version detection toggle
+Aggressive mode toggle
+Output: live results in table + raw XML viewer + parsed view
+Auto-saves to evidence locker
+Right-click any host → "Add to workspace scope", "Run service scan", "Lookup in Meli"
+
+Masscan (high-speed scanner)
+
+Rate-limited port scanner for large networks
+Banner grabbing
+Output integration with Nmap
+
+ARP Scanner
+
+Local network discovery
+MAC vendor lookup
+Hostname resolution
+Live host monitoring
+
+DNS Tools
+
+Standard query (A, AAAA, MX, NS, TXT, CNAME, etc.)
+Reverse DNS
+DNS zone transfer attempt
+DNSSEC validation
+Subdomain enumeration (dictionary + permutation + cert transparency)
+DNS history (via SecurityTrails API if key configured)
+
+WHOIS
+
+Domain WHOIS
+IP WHOIS
+ASN lookup
+Historical WHOIS (if API configured)
+
+Traceroute
+
+ICMP, UDP, TCP traceroute
+Visual hop map
+Geolocation per hop
+ASN per hop
+
+Service Fingerprinter
+
+Banner grabbing
+Protocol detection
+TLS/SSL inspection
+HTTP server identification
+SSH key fingerprinting
+
+Web Application Testing
+HTTP Inspector
+
+Send custom requests (full method, header, body control)
+Repeater mode (modify and resend)
+Response viewer: rendered, raw, hex, headers, cookies
+TLS info display
+Save request/response pairs to evidence
+
+Directory Buster
+
+Wrapper around gobuster/ffuf/dirb
+Wordlist selector from manager
+Extensions filter
+Recursive option
+Status code filters
+Threads control
+Live results
+
+Nikto Scanner
+
+Full Nikto integration
+Profile selection
+Output parsing into findings
+
+SQLMap Integration
+
+Target URL/request file input
+Database detection
+Enumeration options
+Output to evidence
+
+WPScan
+
+WordPress-specific scanner
+Plugin/theme enumeration
+User enumeration
+Vulnerability matching
+
+FFUF / Gobuster
+
+General-purpose fuzzers
+Multiple modes: directory, vhost, parameter, value
+
+HTTP Proxy (mitmproxy embedded)
+
+Intercept and modify requests in real time
+Replay
+Match-and-replace rules
+Export captures to evidence
+
+JWT Analyzer
+
+Decode JWT
+Verify signature with provided secret
+Brute force secret (small wordlists)
+Modify and re-sign
+Algorithm confusion attack testing
+"none" algorithm test
+
+SSL/TLS Analyzer
+
+Certificate inspection
+Cipher suite enumeration
+Protocol support (SSLv2/3, TLS 1.0/1.1/1.2/1.3)
+Vulnerability checks (Heartbleed, POODLE, BEAST, CRIME, BREACH, etc.)
+HSTS, HPKP analysis
+Certificate transparency log lookup
+Public key extraction
+Visual cert chain display
+
+HTTP Headers Analyzer
+
+Security headers check (CSP, HSTS, X-Frame-Options, etc.)
+Information disclosure detection
+Cookie security flags audit
+
+Vulnerability Scanner
+Nuclei
+
+Full Nuclei integration
+Template browser (search by CVE, tag, severity, author)
+Template management (update, install custom)
+Target input flexibility
+Severity filters
+Output parsing into findings with full template metadata
+
+CVE Search
+
+Local CVE database (downloaded during setup)
+Search by ID, keyword, vendor, product, CVSS range, date range
+View full CVE details: description, references, affected products, CVSS vector, exploit availability
+Bulk CVE lookup from scan results
+
+Exploit Search
+
+Searchsploit integration
+Exploit-DB online search
+Metasploit module search
+View exploit code with syntax highlighting
+Copy exploit to workspace payloads
+
+Vulners Lookup
+
+API-based vulnerability lookup
+Software version-based search
+Bulk software list checking
+
+Wireless
+WiFi Scanner
+
+802.11 scanner (requires monitor-mode capable adapter)
+AP enumeration (BSSID, ESSID, channel, signal, encryption, clients)
+Client tracking
+Probe request capture
+Hidden SSID detection
+WPS information
+Vendor identification
+
+Bluetooth Scanner
+
+Classic Bluetooth and BLE
+Device enumeration
+Service discovery
+Beacon detection
+
+Packet Capture
+
+Embedded tshark/scapy
+Filter expressions
+Live capture or PCAP file analysis
+Protocol decoders
+Statistics view (conversations, endpoints, protocol hierarchy)
+Save captures to evidence
+
+Deauth Detector
+
+Monitor for deauthentication attacks against own network
+Alert on anomalies
+
+Password Attacks
+Hash Identifier
+
+Paste hash → identify likely algorithms
+Hashcat/John mode suggestions
+
+John the Ripper
+
+Full integration
+Hash file input
+Wordlist + rules
+Incremental mode
+Custom mode definitions
+Live cracking progress
+Show/restore sessions
+
+Hashcat
+
+All attack modes (dictionary, mask, hybrid, combo, brute-force)
+Wordlist + rules
+GPU device selection
+Workload tuning
+Live progress (speed, ETA, recovered)
+Result viewer
+
+Hydra (Online Brute Force)
+
+Protocol selection (SSH, FTP, HTTP form, HTTP basic, SMB, RDP, MySQL, etc.)
+Target input
+Username/password lists from wordlist manager
+Threads, retries, timeout configuration
+Live results
+Stop/pause/resume
+
+Wordlist Manager
+
+Built-in list browser (SecLists categorized: usernames, passwords, web, fuzzing, etc.)
+Install/uninstall standard lists
+Custom list upload
+Tag system
+Search across all lists
+Generate combined/filtered lists
+Statistics per list (size, encoding, line count)
+
+HaveIBeenPwned Check
+
+Single email lookup
+Bulk email lookup from file
+Single password lookup (k-anonymity, only hash prefix sent)
+Breach details viewer
+
+Forensics
+File Analyzer
+
+Drop any file → full analysis
+Hash all algorithms (MD5, SHA-1, SHA-256, SHA-512, ssdeep)
+File type detection (magic bytes, libmagic)
+Strings extraction (ASCII, Unicode, configurable min length)
+Hex viewer with search
+Entropy analysis
+Metadata extraction (EXIF for images, document properties, etc.)
+Embedded file detection (binwalk)
+YARA rule matching
+
+EXIF Tool
+
+Full ExifTool integration for image/video/document metadata
+Strip metadata option
+Compare original vs. stripped
+
+Binwalk
+
+Firmware analysis
+Embedded file extraction
+Filesystem detection
+Entropy graphs
+
+YARA Scanner
+
+Rule editor with syntax highlighting
+Rule library (default malware rules + custom)
+Scan files, directories, or memory
+Live match indicators
+Rule testing
+
+PE Analyzer (Windows binaries)
+
+Headers, sections, imports, exports
+Resources (icons, strings, manifests)
+Digital signature verification
+Packer detection (PEiD signatures)
+Suspicious indicators (high entropy sections, unusual imports)
+
+ELF Analyzer (Linux binaries)
+
+Headers, sections, symbols
+Dynamic libraries
+Security mitigations (NX, ASLR, RELRO, Canary, PIE)
+String references
+Disassembly view (objdump integration)
+
+PDF Analyzer
+
+Structure inspection
+JavaScript detection
+Embedded files/objects
+Form analysis
+Suspicious patterns
+
+Office Document Analyzer
+
+Macro extraction (oletools)
+Embedded objects
+VBA code inspection
+Hidden content detection
+
+Memory Forensics (Volatility 3)
+
+Memory image analysis
+Process listing
+Network connections
+Loaded modules
+Registry hives (Windows)
+Malware detection plugins
+
+Hash Calculator
+
+File or text input
+All major algorithms simultaneously
+Compare two files
+Bulk hash from directory
+
+Threat Intelligence
+IP Intel
+
+Single IP investigation
+Parallel lookups: GeoIP, ASN, AbuseIPDB, GreyNoise, VirusTotal, Shodan, Censys, IPInfo
+Tor exit node check
+Known VPN/proxy check
+Reverse DNS history
+Open ports (from internet-wide scans via Shodan/Censys)
+Meli cross-reference (if Meli detected): "Has this IP attacked my honeypots? When? How many times? Which honeypots? What credentials/commands?"
+Add to workspace watchlist
+Generate intel report
+
+Domain Intel
+
+WHOIS history
+DNS records (current and historical)
+Subdomain enumeration
+Certificate transparency logs
+Related domains (same registrant, same SSL cert)
+Reputation lookups
+Screenshot history (if available)
+Meli cross-reference (if domain in honeypot logs)
+
+Shodan
+
+Search by query
+Host lookup
+Honeypot detection (Shodan's "honeypot score")
+Saved searches
+Alerts (if API plan supports)
+
+Censys
+
+Hosts search
+Certificates search
+Auto-correlation with other tools
+
+Threat Feeds
+
+Configure feeds (URLs, formats)
+Built-in feeds: abuse.ch, AlienVault OTX, Emerging Threats, MalwareBazaar
+Manual feed update or scheduled
+Search across all loaded indicators
+Match against scan results
+
+MISP Integration
+
+Connect to MISP instances
+Event browsing
+Indicator import
+Push findings as MISP events
+
+AlienVault OTX
+
+Pulse browsing
+Subscribe to pulses
+Indicator lookups
+Submit findings to OTX
+
+OSINT
+Email Finder
+
+Domain → likely emails (pattern guessing + verification)
+Holehe integration (check email across many services without sending)
+HIBP breach check
+Format detection (firstlast@, first.last@, etc.)
+
+Username Search
+
+Sherlock/Maigret integration
+Search a username across 400+ social/web platforms
+Result filtering and verification
+Profile screenshot capture (optional)
+
+Subdomain Enumeration
+
+Dictionary-based brute force
+Cert transparency
+DNS records cross-referencing
+API integrations (SecurityTrails, Censys, Shodan, VirusTotal subdomains)
+Permutation generation
+
+Company Intel
+
+Domain → company info (via OSINT APIs)
+Employee enumeration (LinkedIn patterns, theHarvester)
+Tech stack detection (BuiltWith, Wappalyzer)
+Branch/office locations
+Recent news/breaches
+
+Breach Check
+
+Email, username, domain → breach databases
+HIBP, Dehashed (if API), LeakCheck (if API)
+
+Social Recon
+
+Public social media OSINT helpers
+Profile metadata extraction
+Connection analysis (where permitted by API ToS)
+All results stay in evidence locker
+
+Exploitation
+Metasploit Bridge
+
+RPC connection to local MSF instance
+Module browser (exploits, payloads, auxiliary, post)
+Module search
+Set options via GUI form
+Launch and monitor sessions
+Session management
+All activity logged to evidence
+
+Payload Generator
+
+msfvenom GUI wrapper
+Payload selection (all available types)
+Encoder selection
+Format selection
+LHOST/LPORT/options form
+Generate to file
+Preview generated payload
+Hash output for tracking
+
+Reverse Shell Generator
+
+Quick-generate reverse shells in 30+ languages/methods (bash, python, php, perl, ruby, powershell, nc, openssl, awk, etc.)
+IP + port input
+One-click copy
+Encoding options (base64, URL, hex)
+Listener auto-spawn option
+
+Listener Manager
+
+Spawn netcat listeners with one click
+msfconsole listener integration
+Encrypted listeners (openssl)
+Connection log
+Stop/restart controls
+Multi-listener support
+
+Crypto Tools
+Hash Tools
+
+Calculate hashes (text or file, all algorithms)
+Compare hashes
+Identify hash type from format
+
+Encoder/Decoder
+
+Base64, URL, HTML, Hex, Binary, ASCII85, Quoted-Printable, ROT13, Morse, etc.
+Live encode/decode as you type
+Multi-step chains
+Auto-detection mode
+
+Cipher Tools
+
+Classical: Caesar, Vigenère, Atbash, Substitution, Playfair, Rail Fence
+Modern: AES, DES, 3DES, ChaCha20, RSA (encrypt/decrypt with provided keys)
+Hash-based crypto helpers
+
+Certificate Inspector
+
+View any cert (file or remote host)
+Full chain validation
+Subject/issuer/SAN/extensions
+Public key extraction
+Convert formats (PEM ↔ DER ↔ PKCS12)
+Generate CSR
+Generate self-signed cert (for lab use)
+
+Findings Manager
+Every tool can promote results to formal Findings.
+Finding Object
+
+Finding ID (UUID)
+Workspace ID
+Title
+Severity (Critical, High, Medium, Low, Info)
+CVSS vector + score (optional)
+CVE references (optional)
+MITRE ATT&CK technique IDs (optional)
+Description (markdown)
+Affected asset (IP, hostname, URL, file, user, etc.)
+Reproduction steps (markdown)
+Evidence references (links to evidence locker)
+Recommendation (markdown)
+Status (open, in_review, false_positive, accepted_risk, resolved, retest)
+Discovered date, last updated
+Tags
+Assigned to (for team scenarios)
+
+Findings UI
+
+Table view: sortable, filterable by severity/status/tag/asset
+Detail view: full markdown rendering, evidence carousel
+Bulk operations: tag, change status, assign, delete
+Severity dashboard with charts
+MITRE ATT&CK matrix overlay
+Export selected to report
+
+Replay Engine
+Re-run any past scan with one click.
+Capabilities
+
+Browse scan history per workspace
+"Replay" any scan with same parameters
+"Replay with modifications" — edit parameters before re-run
+Auto-compare results to previous run
+Diff view: what's new, what's changed, what's gone
+Highlight regressions (new vulnerabilities) and improvements (closed vulnerabilities)
+Save replay as scheduled task
+
+Scheduler
+Schedule recurring scans.
+Capabilities
+
+Cron-style scheduling (visual builder or expression)
+Recurring scan with target/profile/options frozen
+Diff reports against previous runs
+Email/webhook notification on completion
+Pause/resume/delete schedules
+Schedule sharing across workspaces (run same scan in different scopes)
+Maximum concurrent scans setting
+Resource limits per scheduled scan
+
+Plugin System
+Drop a Python file in ~/.config/godsapp/plugins/, it becomes a new tool.
+Plugin API
+pythonfrom godsapp.plugin_api import Plugin, ToolCategory, register
+
+@register
+class MyCustomTool(Plugin):
+    name = "My Custom Tool"
+    category = ToolCategory.NETWORK
+    description = "Does something useful"
+    author = "Plugin Author"
+    version = "1.0.0"
+    
+    def get_inputs(self):
+        return [
+            {"name": "target", "type": "text", "required": True},
+            {"name": "depth", "type": "int", "default": 3},
+        ]
+    
+    def run(self, inputs, context):
+        # context provides: workspace, evidence_locker, logger, api_keys
+        # Return findings, raw output, evidence
+        result = do_something(inputs["target"])
+        context.evidence_locker.capture(result, source="my_custom_tool")
+        return {"output": result, "findings": []}
+Plugin Manager UI
+
+List loaded plugins
+Enable/disable plugins
+Install new plugin (file picker)
+View plugin source code
+Plugin marketplace (browse community plugins from a curated repo URL)
+Reload plugins without restarting GodsApp
+Plugin permissions (network access, filesystem access, subprocess execution — sandboxed where possible)
+
+REST API
+Local FastAPI server for programmatic access.
+Endpoints (key examples)
+
+POST /api/v1/auth/login — get token
+GET /api/v1/workspaces — list workspaces
+POST /api/v1/workspaces — create
+POST /api/v1/workspaces/{id}/scans — start a scan
+GET /api/v1/scans/{id} — scan status
+GET /api/v1/scans/{id}/results — results
+GET /api/v1/findings — list findings
+POST /api/v1/findings/{id}/evidence — attach evidence
+GET /api/v1/evidence/{id} — fetch evidence (with chain entry)
+POST /api/v1/reports/generate — generate report
+WebSocket /ws/scans/{id} — live scan output stream
+
+Auth
+
+Bearer token (JWT)
+Token issued by GodsApp UI under Settings → API
+Per-token permissions (read-only, scan, write, admin)
+Rate limiting
+
+Toggle
+
+Off by default
+User explicitly enables in Settings → API
+Bind to 127.0.0.1 only (no LAN exposure by default)
+Optional LAN bind with strong auth
+
+CLI Mode
+bashgodsapp --help
+godsapp workspace create "Client X 2026"
+godsapp workspace list
+godsapp scan nmap --workspace "Client X 2026" --target 10.0.0.0/24 --profile full
+godsapp scan nuclei --workspace "Client X 2026" --target https://example.com
+godsapp findings list --workspace "Client X 2026" --severity high,critical
+godsapp report generate --workspace "Client X 2026" --format pdf --output /tmp/report.pdf
+godsapp evidence list --workspace "Client X 2026"
+godsapp plugin list
+godsapp plugin install /path/to/plugin.py
+godsapp api start
+godsapp api stop
+Output is rich-formatted (colors, tables) by default, with --json for machine consumption.
+Embedded Terminal
+A real terminal emulator (VTE-based) inside GodsApp.
+
+Tab support
+Drop into any workspace's evidence directory or tool output directory
+Aware of current workspace (env vars set)
+Logged: all commands run get archived to workspace's terminal history
+Available as a side panel or full view
+Theme matches app
+
+Meli Integration (Optional, Auto-Detected)
+On startup, GodsApp checks for Meli:
+
+Looks for /usr/local/bin/meli binary
+Looks for ~/.local/share/meli/meli.db
+Tests Meli's HTTP API at localhost:17654/api/v1/health
+
+If detected, the following features light up:
+In IP Intel tool:
+
+New section "Meli Honeypot Data" appears
+Shows: total attacks from this IP, first seen, last seen, max severity, honeypots hit, credentials tried, commands run, payloads delivered
+Direct link to open the IP's full profile in Meli
+
+In Domain Intel tool:
+
+Reverse-lookup IPs of the domain, then check each against Meli
+
+In Findings:
+
+New finding type "Active Threat" — automatically created when an asset in your workspace scope appears as an attacker in Meli
+Real-time alert if a target in scope starts attacking your honeypots during an engagement
+
+In Threat Intelligence view:
+
+Dedicated "My Honeypot Threats" tab showing top attackers across all honeypots
+Direct cross-reference: "Look up in Shodan", "Look up in VirusTotal", "Look up in Censys"
+
+In Reports:
+
+Optional report section "Honeypot Cross-Reference" — includes any in-scope IPs that appear in Meli data
+Optional report appendix "Internal Threat Intelligence" — relevant Meli observations during the engagement window
+
+In Dashboard:
+
+"Meli Status" widget — total events Meli has captured, current threat level, link to Meli
+
+If Meli is not detected, none of these elements appear in the UI. No warnings, no nag screens.
+Settings (All Functional)
+Comprehensive settings panel with sections:
+General
+
+Language
+Theme variant (Replit decides actual styling)
+Default workspace
+Confirm before destructive actions
+Auto-save scan output
+Default report format
+
+Authentication & Security
+
+Change master password
+Enable/disable 2FA
+Regenerate TOTP secret
+Enroll/remove YubiKey
+Auto-lock timeout
+Failed login lockout settings
+Session timeout
+View audit log
+Generate/regenerate recovery file
+Encrypted backup of config
+
+API Keys
+
+Shodan API key + status + last test
+Censys API ID + secret
+VirusTotal API key
+AbuseIPDB API key
+GreyNoise API key
+IPInfo API key
+HaveIBeenPwned API key
+SecurityTrails API key
+AlienVault OTX API key
+MISP server URL + API key
+Vulners API key
+All fields: test button, masked display, last used, daily usage tracking
+
+Tool Paths
+
+Override paths to nmap, nuclei, hashcat, etc.
+"Detect installed tools" button
+Show missing tool warnings
+
+Wordlists
+
+Default wordlist directory
+Install SecLists button
+Manage installed lists
+Add custom list directory
+
+Network
+
+Default DNS server
+Proxy configuration (HTTP, SOCKS)
+Tor toggle
+Proxychains config
+VPN integration check
+Source interface selection
+
+Scanning
+
+Default scan concurrency
+Default scan timeout
+Default rate limits per tool
+Resource limits (CPU, memory)
+Output buffer sizes
+
+Reporting
+
+Default report template
+Author name (defaults to user from auth)
+Organization name
+Logo upload (for report headers)
+Custom report templates directory
+Default findings severity threshold for report inclusion
+
+Evidence
+
+Evidence storage location
+Maximum evidence storage size
+Auto-cleanup policy
+Default screenshot tool
+PCAP capture defaults
+
+Plugins
+
+Plugin directory paths
+Enabled/disabled plugins
+Plugin permissions
+Marketplace URL
+
+API Server
+
+Enable/disable REST API
+Bind address (127.0.0.1 only by default, with warning for other binds)
+Port
+TLS toggle + cert paths
+Token management
+Rate limiting
+Allowed origins (CORS)
+
+Meli Integration
+
+Auto-detect on startup (toggle)
+Override Meli paths
+Test connection button
+Disable Meli features (override)
+
+Database
+
+Database location (display)
+Backup now
+Restore from backup
+Schedule auto-backups
+Vacuum database
+Export full data
+Switch to PostgreSQL backend (migration wizard)
+
+Logs
+
+Log level
+Log rotation
+View logs button
+Clear logs
+
+About
+
+Name: GodsApp
+Version
+Author: Joseph Sierengowski
+Build date
+License
+GitHub repository link
+Documentation link
+Open source dependencies list (with versions)
+Acknowledgments
+
+Keyboard Shortcuts (All Wired)
+
+Ctrl+, — Settings
+Ctrl+L — Lock immediately
+Ctrl+Q — Quit (with confirmation)
+Ctrl+K — Global command palette
+Ctrl+F — Focus search in current view
+Ctrl+N — New scan (context-aware: opens new scan dialog for current tool category)
+Ctrl+Shift+N — New workspace
+Ctrl+W — Close current view
+Ctrl+T — New terminal tab
+Ctrl+E — Open evidence locker
+Ctrl+R — Run/refresh current
+Ctrl+Shift+R — Replay last scan
+Ctrl+S — Save current (findings, notes, scan output)
+Ctrl+P — Print/export current view
+Ctrl+/ — Toggle right sidebar
+Ctrl+\ — Toggle left sidebar
+Ctrl+B — Toggle bottom status bar expanded view
+F1 — Help / docs for current tool
+F2 — Rename current item
+F5 — Refresh
+F11 — Fullscreen
+Escape — Cancel current action / close modal
+/ — Global search
+? — Show keyboard shortcuts overlay
+1-9 — Switch to numbered left sidebar item
+Per-tool shortcuts (documented within each tool)
+
+Reports
+Report Types
+
+Engagement Report — full workspace summary, executive summary, scope, findings, evidence, recommendations
+Findings Report — just findings, filterable
+Evidence Report — all evidence with chain of custody
+Scan Report — single scan in detail
+Threat Intel Report — IP/domain investigations
+Compliance Report — MITRE ATT&CK coverage mapping
+Comparison Report — diff between two replay runs
+Daily Activity Report — what happened today
+
+Report Formats
+
+PDF (default, ReportLab/WeasyPrint)
+Markdown
+DOCX (Word)
+XLSX (Excel — findings/evidence tables)
+HTML
+JSON (machine-readable export)
+SARIF (Static Analysis Results Interchange Format — for IDE integration)
+
+Report Customization
+
+Logo upload
+Cover page customization
+Author/organization details
+Custom sections
+Severity threshold filter
+Asset filter
+Template selection
+Custom templates (Jinja2 markdown templates)
+Watermarking
+Confidentiality marking (TLP red/amber/green/clear)
+
+Sanitized Export
+For sharing with clients:
+
+Strips internal notes
+Strips evidence not marked "client-shareable"
+Watermarks pages
+Author identity preservation or anonymization (toggle)
+Optional PDF redaction tools
+
+Reporting MITRE ATT&CK Mapping
+
+Every finding can be tagged with one or more ATT&CK technique IDs
+Built-in technique browser (Enterprise, Mobile, ICS matrices)
+Auto-suggest techniques from finding tags
+Generate ATT&CK matrix heatmap per workspace showing coverage
+Export ATT&CK Navigator JSON for upload to https://mitre-attack.github.io/attack-navigator/
+
+Backup & Restore
+
+One-click full backup (encrypted archive)
+Includes: all workspaces, evidence, findings, plugins, configs, API keys, audit logs
+Restore wizard (with conflict resolution)
+Selective backup (specific workspaces only)
+Scheduled auto-backups
+Backup verification (decryption test)
+Cloud storage hooks (optional: S3, B2, custom rclone targets)
+
+Installation
+From Source
+bashgit clone https://github.com/<user>/godsapp.git
+cd godsapp
+./install.sh
+Install Script Actions
+
+Verifies Python 3.12, GTK4, libadwaita
+Detects which security tools are installed (nmap, nuclei, hydra, etc.)
+Offers to install missing tools via system package manager
+Creates virtual environment at /opt/godsapp/venv
+Installs Python dependencies
+Copies application to /opt/godsapp/app/
+Sets up launcher at /usr/local/bin/godsapp
+Installs .desktop file and icons
+Creates user systemd services
+Initializes database
+Updates desktop database and icon cache
+Prints next steps
+
+Distribution
+
+Arch PKGBUILD (in repo)
+AUR submission ready
+AppImage build script
+.deb build script
+Flatpak manifest
+
+Documentation Requirements (Every Doc Real, No Placeholders)
+README.md
+
+Project name + tagline
+Author: Joseph Sierengowski
+One-paragraph what-and-why
+Feature list (all major capabilities)
+Screenshots (folder structure ready)
+Quick start
+Configuration overview
+Tool catalog overview
+Plugin system overview
+API overview
+Meli integration overview
+Legal disclaimer (link to DISCLAIMER.md)
+License
+Contributing guide
+
+INSTALL.md
+
+System requirements
+Per-distro install (Arch, Ubuntu/Debian, Fedora)
+Optional dependencies and what they enable
+Post-install setup
+Troubleshooting
+
+ARCHITECTURE.md
+
+System overview
+Component breakdown (UI, core, tools, plugins, API, CLI)
+Workspace data flow
+Evidence handling
+Authentication architecture
+Plugin sandbox model
+Database schema
+File layout
+
+API.md
+
+Full REST API reference
+Auth flow
+Endpoint documentation
+WebSocket protocols
+Example curl commands
+Python client examples
+
+PLUGIN_DEVELOPMENT.md
+
+Plugin API reference
+Lifecycle hooks
+Available contexts (workspace, evidence, logger, API keys)
+Sample plugins (network, web, forensic, intel categories)
+Testing your plugin
+Distribution
+
+CLI reference docs
+
+All subcommands documented
+Common workflows
+Scripting examples
+
+Per-tool docs
+
+One file per tool category in docs/tools/
+Tool inputs, options, output formats
+Example usage
+Tips and tricks
+Known limitations
+
+Legal & Ethics docs
+
+DISCLAIMER.md — full legal disclaimer
+SECURITY.md — responsible disclosure for vulnerabilities in GodsApp itself
+legal-and-ethics.md — operator responsibilities, common-case authorization patterns, log retention guidance, evidence preservation best practices
+
+Testing Requirements
+
+Unit tests for workspace operations
+Unit tests for evidence chain of custody
+Unit tests for plugin loading
+Unit tests for each tool's input parser and output parser
+Integration tests for full scan workflows
+Auth/lockout test suite
+API endpoint tests
+Plugin sandbox tests
+Run: pytest from repo root
+
+Build & Distribution Targets
+
+From-source installer
+Arch PKGBUILD
+AUR submission
+AppImage
+.deb package
+Flatpak
+
+Non-Negotiables
+
+No dead-end clicks. Every button does something real.
+No "coming soon" sections. v1.0 = all listed features functional.
+No mock data after development. Empty states explain what data will appear.
+No silent failures. Every error logged, surfaced to user with actionable message.
+No data loss without confirmation. Destructive actions require explicit confirm.
+No external network calls without user consent. Only when the user explicitly invokes a tool that requires it.
+No plaintext secrets on disk. API keys, passwords, tokens all encrypted.
+All tools real and full-featured. No "lite" versions of professional tools.
+Authorization gate cannot be bypassed. Reset audit.db = re-display gate.
+
+What Must Be True at v1.0 Release
+
+All tool categories functional with at least the listed tools
+All views functional, no empty placeholder views
+All settings sections functional
+Plugin system loads and runs example plugins correctly
+REST API works end-to-end with sample client
+CLI mode works for all major operations
+Authorization gate, auth, 2FA, lockout all working
+Workspace lifecycle (create, switch, archive, export, import, delete) working
+Evidence locker with chain of custody working
+Meli integration auto-detects and surfaces features when present, hides them when not
+Reports generate in all listed formats
+Install script works on fresh Arch
+Uninstall script works completely
+README has real screenshots
+All documentation written, no TODOs
+Tests passing
+Packaged binary or AppImage produced and tested
+GitHub repo public with all files committed
+Authored by Joseph Sierengowski throughout (package metadata, About page, README, LICENSE, every file header)
+
+
+That's the spec. Hand to Replit. Same workflow as Meli — when Replit asks clarifying questions, send them to me and I'll answer.
+One more thing for you to know before handing this off: GodsApp is significantly bigger than Meli. Where Meli was 14 views, GodsApp has 12 tool categories with dozens of tools inside each, plus workspaces, evidence, plugins, API, CLI, and Meli bridge. Realistically, even Replit working at full capacity will need multiple build sessions to ship a real v1.0 — probably staged by tool category. Don't be surprised if the first delivery is the foundation (auth, workspaces, evidence locker, settings, plugin system, API, CLI, 2-3 tool categories) and subsequent sessions fill in more categories.
+That's still the right scope. Better to build it whole than to compromise. Send it.You're now past your plan's included usage. Your session limit resets at 4:50 AM.Opus 4.7

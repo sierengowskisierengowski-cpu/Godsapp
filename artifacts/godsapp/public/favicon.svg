@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none">
+  <rect width="180" height="180" rx="36" fill="#0d1b2a"/>
+  <path d="M32 120 Q26 120 22 114 Q18 108 22 101 Q19 94 24 89 Q29 84 35 86 Q37 75 46 70 Q57 64 67 70 Q71 61 82 58 Q95 54 105 63 Q112 59 121 64 Q131 70 130 80 Q140 80 143 89 Q147 99 141 106 Q137 114 130 114 Z" fill="#0d3850" stroke="#22d3ee" stroke-width="3" stroke-linejoin="round"/>
+  <polygon points="97,62 79,100 92,100 81,138 115,96 100,96" fill="#22d3ee"/>
+  <polygon points="97,62 79,100 92,100 81,138 115,96 100,96" fill="none" stroke="#a5f3fc" stroke-width="2" stroke-linejoin="round" opacity="0.5"/>
+</svg>

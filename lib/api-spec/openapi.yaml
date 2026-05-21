@@ -2,21 +2,41 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: GodsApp — Professional Security Auditing & Research Suite API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: workspaces
+    description: Workspace management
+  - name: scans
+    description: Scan operations
+  - name: findings
+    description: Findings management
+  - name: evidence
+    description: Evidence locker
+  - name: dashboard
+    description: Dashboard and analytics
+  - name: plugins
+    description: Plugin management
+  - name: settings
+    description: Settings and configuration
+  - name: reports
+    description: Report generation
+  - name: tools
+    description: Tool invocations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +44,2534 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/setup/status:
+    get:
+      operationId: getSetupStatus
+      tags: [auth]
+      summary: Check if initial setup has been completed
+      responses:
+        "200":
+          description: Setup status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupStatus"
+
+  /auth/setup:
+    post:
+      operationId: completeSetup
+      tags: [auth]
+      summary: Complete initial setup (set master password, accept authorization gate)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupInput"
+      responses:
+        "200":
+          description: Setup completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Authenticate with master password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResult"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+
+  /auth/lock:
+    post:
+      operationId: lockSession
+      tags: [auth]
+      summary: Lock the current session
+      responses:
+        "200":
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LockStatus"
+
+  /auth/session:
+    get:
+      operationId: getSession
+      tags: [auth]
+      summary: Get current session info
+      responses:
+        "200":
+          description: Session info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /auth/password:
+    patch:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change master password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/audit-log:
+    get:
+      operationId: getAuditLog
+      tags: [auth]
+      summary: Get security audit log entries
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogEntry"
+
+  # ── API Keys ──────────────────────────────────────────────────────────────
+  /settings/api-keys:
+    get:
+      operationId: getApiKeys
+      tags: [settings]
+      summary: Get all configured API keys (masked)
+      responses:
+        "200":
+          description: API keys list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiKey"
+
+    put:
+      operationId: upsertApiKey
+      tags: [settings]
+      summary: Create or update an API key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiKeyInput"
+      responses:
+        "200":
+          description: API key saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKey"
+
+  /settings/api-keys/{service}/test:
+    post:
+      operationId: testApiKey
+      tags: [settings]
+      summary: Test an API key connection
+      parameters:
+        - name: service
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyTestResult"
+
+  /settings/general:
+    get:
+      operationId: getGeneralSettings
+      tags: [settings]
+      summary: Get general settings
+      responses:
+        "200":
+          description: General settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralSettings"
+
+    patch:
+      operationId: updateGeneralSettings
+      tags: [settings]
+      summary: Update general settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeneralSettingsUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneralSettings"
+
+  /settings/tools/status:
+    get:
+      operationId: getToolsStatus
+      tags: [settings]
+      summary: Get status of installed system tools
+      responses:
+        "200":
+          description: Tool status list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SystemToolStatus"
+
+  # ── Workspaces ────────────────────────────────────────────────────────────
+  /workspaces:
+    get:
+      operationId: listWorkspaces
+      tags: [workspaces]
+      summary: List all workspaces
+      responses:
+        "200":
+          description: Workspace list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workspace"
+
+    post:
+      operationId: createWorkspace
+      tags: [workspaces]
+      summary: Create a new workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+
+  /workspaces/{id}:
+    get:
+      operationId: getWorkspace
+      tags: [workspaces]
+      summary: Get workspace details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+
+    patch:
+      operationId: updateWorkspace
+      tags: [workspaces]
+      summary: Update workspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+
+    delete:
+      operationId: deleteWorkspace
+      tags: [workspaces]
+      summary: Delete a workspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /workspaces/{id}/stats:
+    get:
+      operationId: getWorkspaceStats
+      tags: [workspaces]
+      summary: Get workspace statistics
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Workspace stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceStats"
+
+  # ── Scans ─────────────────────────────────────────────────────────────────
+  /workspaces/{workspaceId}/scans:
+    get:
+      operationId: listScans
+      tags: [scans]
+      summary: List scans in a workspace
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scan list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Scan"
+
+    post:
+      operationId: createScan
+      tags: [scans]
+      summary: Start a new scan
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanInput"
+      responses:
+        "201":
+          description: Scan started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scan"
+
+  /workspaces/{workspaceId}/scans/{scanId}:
+    get:
+      operationId: getScan
+      tags: [scans]
+      summary: Get scan details and results
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: scanId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scan with results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanDetail"
+
+    delete:
+      operationId: deleteScan
+      tags: [scans]
+      summary: Delete a scan
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: scanId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /workspaces/{workspaceId}/scans/{scanId}/stop:
+    post:
+      operationId: stopScan
+      tags: [scans]
+      summary: Stop a running scan
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: scanId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scan"
+
+  /workspaces/{workspaceId}/scans/{scanId}/replay:
+    post:
+      operationId: replayScan
+      tags: [scans]
+      summary: Re-run a scan with the same or modified parameters
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: scanId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplayScanInput"
+      responses:
+        "201":
+          description: New scan started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Scan"
+
+  # ── Findings ──────────────────────────────────────────────────────────────
+  /workspaces/{workspaceId}/findings:
+    get:
+      operationId: listFindings
+      tags: [findings]
+      summary: List findings in a workspace
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Findings list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Finding"
+
+    post:
+      operationId: createFinding
+      tags: [findings]
+      summary: Create a finding manually
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FindingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Finding"
+
+  /workspaces/{workspaceId}/findings/{findingId}:
+    get:
+      operationId: getFinding
+      tags: [findings]
+      summary: Get finding details
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: findingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Finding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Finding"
+
+    patch:
+      operationId: updateFinding
+      tags: [findings]
+      summary: Update a finding
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: findingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FindingUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Finding"
+
+    delete:
+      operationId: deleteFinding
+      tags: [findings]
+      summary: Delete a finding
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: findingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /workspaces/{workspaceId}/findings/summary:
+    get:
+      operationId: getFindingsSummary
+      tags: [findings]
+      summary: Get findings severity breakdown
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Severity summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FindingsSummary"
+
+  # ── Evidence ──────────────────────────────────────────────────────────────
+  /workspaces/{workspaceId}/evidence:
+    get:
+      operationId: listEvidence
+      tags: [evidence]
+      summary: List evidence in workspace
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Evidence list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Evidence"
+
+    post:
+      operationId: createEvidence
+      tags: [evidence]
+      summary: Manually add evidence
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+
+  /workspaces/{workspaceId}/evidence/{evidenceId}:
+    get:
+      operationId: getEvidence
+      tags: [evidence]
+      summary: Get evidence details
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: evidenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Evidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+
+    delete:
+      operationId: deleteEvidence
+      tags: [evidence]
+      summary: Delete evidence
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: evidenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /workspaces/{workspaceId}/evidence/{evidenceId}/custody:
+    get:
+      operationId: getEvidenceCustody
+      tags: [evidence]
+      summary: Get chain of custody for evidence
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: evidenceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Custody chain
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustodyEntry"
+
+  # ── Dashboard ─────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get global dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity across all workspaces
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
+  /dashboard/active-scans:
+    get:
+      operationId: getActiveScans
+      tags: [dashboard]
+      summary: Get all currently running scans
+      responses:
+        "200":
+          description: Active scans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Scan"
+
+  # ── Tools ─────────────────────────────────────────────────────────────────
+  /tools/network/dns:
+    post:
+      operationId: runDnsLookup
+      tags: [tools]
+      summary: Run DNS lookup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DnsLookupInput"
+      responses:
+        "200":
+          description: DNS results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DnsLookupResult"
+
+  /tools/network/whois:
+    post:
+      operationId: runWhoisLookup
+      tags: [tools]
+      summary: Run WHOIS lookup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhoisInput"
+      responses:
+        "200":
+          description: WHOIS result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhoisResult"
+
+  /tools/crypto/hash:
+    post:
+      operationId: calculateHash
+      tags: [tools]
+      summary: Calculate hash of text input
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HashInput"
+      responses:
+        "200":
+          description: Hash results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HashResult"
+
+  /tools/crypto/encode:
+    post:
+      operationId: encodeText
+      tags: [tools]
+      summary: Encode/decode text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EncodeInput"
+      responses:
+        "200":
+          description: Encoded/decoded result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EncodeResult"
+
+  /tools/crypto/identify-hash:
+    post:
+      operationId: identifyHash
+      tags: [tools]
+      summary: Identify hash type from value
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IdentifyHashInput"
+      responses:
+        "200":
+          description: Hash type candidates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IdentifyHashResult"
+
+  /tools/web/ssl:
+    post:
+      operationId: analyzeSsl
+      tags: [tools]
+      summary: Analyze SSL/TLS configuration of a host
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SslAnalysisInput"
+      responses:
+        "200":
+          description: SSL analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SslAnalysisResult"
+
+  /tools/web/headers:
+    post:
+      operationId: analyzeHeaders
+      tags: [tools]
+      summary: Analyze HTTP security headers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HeaderAnalysisInput"
+      responses:
+        "200":
+          description: Header analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HeaderAnalysisResult"
+
+  /tools/web/jwt:
+    post:
+      operationId: analyzeJwt
+      tags: [tools]
+      summary: Decode and analyze a JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JwtAnalysisInput"
+      responses:
+        "200":
+          description: JWT analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JwtAnalysisResult"
+
+  /tools/exploitation/reverse-shell:
+    post:
+      operationId: generateReverseShell
+      tags: [tools]
+      summary: Generate reverse shell payload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReverseShellInput"
+      responses:
+        "200":
+          description: Generated reverse shells
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReverseShellResult"
+
+  /tools/intel/ip:
+    post:
+      operationId: lookupIpIntel
+      tags: [tools]
+      summary: Perform IP intelligence lookup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IpIntelInput"
+      responses:
+        "200":
+          description: IP intelligence data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpIntelResult"
+
+  /tools/password/hibp:
+    post:
+      operationId: checkHibp
+      tags: [tools]
+      summary: Check email or password against HaveIBeenPwned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HibpInput"
+      responses:
+        "200":
+          description: HIBP check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HibpResult"
+
+  # ── Plugins ───────────────────────────────────────────────────────────────
+  /plugins:
+    get:
+      operationId: listPlugins
+      tags: [plugins]
+      summary: List all installed plugins
+      responses:
+        "200":
+          description: Plugin list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Plugin"
+
+  /plugins/{id}/toggle:
+    post:
+      operationId: togglePlugin
+      tags: [plugins]
+      summary: Enable or disable a plugin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PluginToggleInput"
+      responses:
+        "200":
+          description: Plugin updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Plugin"
+
+  # ── Reports ───────────────────────────────────────────────────────────────
+  /workspaces/{workspaceId}/reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List generated reports for a workspace
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reports list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+
+    post:
+      operationId: generateReport
+      tags: [reports]
+      summary: Generate a new report
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: Report generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+  /workspaces/{workspaceId}/reports/{reportId}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get report details
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+
+    delete:
+      operationId: deleteReport
+      tags: [reports]
+      summary: Delete a report
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Scheduler ─────────────────────────────────────────────────────────────
+  /workspaces/{workspaceId}/schedules:
+    get:
+      operationId: listSchedules
+      tags: [workspaces]
+      summary: List scheduled scans for a workspace
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Schedules list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schedule"
+
+    post:
+      operationId: createSchedule
+      tags: [workspaces]
+      summary: Create a scheduled scan
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScheduleInput"
+      responses:
+        "201":
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+
+  /workspaces/{workspaceId}/schedules/{scheduleId}:
+    delete:
+      operationId: deleteSchedule
+      tags: [workspaces]
+      summary: Delete a schedule
+      parameters:
+        - name: workspaceId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+# ── Schemas ───────────────────────────────────────────────────────────────
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: ["string", "null"]
+
+    # ── Auth ────────────────────────────────────────────────────────────────
+    SetupStatus:
+      type: object
+      required: [completed, authorizationAccepted]
+      properties:
+        completed:
+          type: boolean
+        authorizationAccepted:
+          type: boolean
+
+    SetupInput:
+      type: object
+      required: [password, authorizationAccepted, operatorName]
+      properties:
+        password:
+          type: string
+          minLength: 14
+        authorizationAccepted:
+          type: boolean
+        operatorName:
+          type: string
+        totpEnabled:
+          type: boolean
+        apiKeys:
+          type: object
+          additionalProperties:
+            type: string
+
+    LoginInput:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+        totpCode:
+          type: ["string", "null"]
+
+    AuthResult:
+      type: object
+      required: [success, operatorName]
+      properties:
+        success:
+          type: boolean
+        operatorName:
+          type: string
+        lastLogin:
+          type: ["string", "null"]
+        token:
+          type: ["string", "null"]
+
+    AuthError:
+      type: object
+      required: [error, attemptsRemaining]
+      properties:
+        error:
+          type: string
+        attemptsRemaining:
+          type: integer
+        lockedUntil:
+          type: ["string", "null"]
+
+    LockStatus:
+      type: object
+      required: [locked]
+      properties:
+        locked:
+          type: boolean
+
+    Session:
+      type: object
+      required: [authenticated, locked]
+      properties:
+        authenticated:
+          type: boolean
+        locked:
+          type: boolean
+        operatorName:
+          type: ["string", "null"]
+        lastLogin:
+          type: ["string", "null"]
+        setupComplete:
+          type: boolean
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 14
+
+    AuditLogEntry:
+      type: object
+      required: [id, timestamp, action, actor]
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+        action:
+          type: string
+        actor:
+          type: string
+        target:
+          type: ["string", "null"]
+        details:
+          type: ["string", "null"]
+        ipAddress:
+          type: ["string", "null"]
+
+    # ── API Keys ────────────────────────────────────────────────────────────
+    ApiKey:
+      type: object
+      required: [service, configured, lastTested]
+      properties:
+        service:
+          type: string
+        configured:
+          type: boolean
+        maskedKey:
+          type: ["string", "null"]
+        lastTested:
+          type: ["string", "null"]
+        testStatus:
+          type: ["string", "null"]
+
+    ApiKeyInput:
+      type: object
+      required: [service, key]
+      properties:
+        service:
+          type: string
+        key:
+          type: string
+
+    ApiKeyTestResult:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        details:
+          type: ["string", "null"]
+
+    # ── Settings ────────────────────────────────────────────────────────────
+    GeneralSettings:
+      type: object
+      required: [operatorName, defaultWorkspaceId, autoLockMinutes, defaultReportFormat, confirmDestructive]
+      properties:
+        operatorName:
+          type: string
+        organizationName:
+          type: ["string", "null"]
+        defaultWorkspaceId:
+          type: ["string", "null"]
+        autoLockMinutes:
+          type: integer
+        defaultReportFormat:
+          type: string
+        confirmDestructive:
+          type: boolean
+        autoSaveScanOutput:
+          type: boolean
+
+    GeneralSettingsUpdate:
+      type: object
+      properties:
+        operatorName:
+          type: string
+        organizationName:
+          type: ["string", "null"]
+        defaultWorkspaceId:
+          type: ["string", "null"]
+        autoLockMinutes:
+          type: integer
+        defaultReportFormat:
+          type: string
+        confirmDestructive:
+          type: boolean
+        autoSaveScanOutput:
+          type: boolean
+
+    SystemToolStatus:
+      type: object
+      required: [name, installed, path, category]
+      properties:
+        name:
+          type: string
+        installed:
+          type: boolean
+        path:
+          type: ["string", "null"]
+        version:
+          type: ["string", "null"]
+        category:
+          type: string
+
+    # ── Workspaces ──────────────────────────────────────────────────────────
+    Workspace:
+      type: object
+      required: [id, name, status, createdAt, updatedAt, color, findingCounts]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        client:
+          type: ["string", "null"]
+        scope:
+          type: array
+          items:
+            type: string
+        outOfScope:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, archived]
+        color:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        lastActivity:
+          type: ["string", "null"]
+        findingCounts:
+          $ref: "#/components/schemas/FindingCounts"
+
+    WorkspaceInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        client:
+          type: string
+        scope:
+          type: array
+          items:
+            type: string
+        outOfScope:
+          type: array
+          items:
+            type: string
+        color:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    WorkspaceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        client:
+          type: ["string", "null"]
+        scope:
+          type: array
+          items:
+            type: string
+        outOfScope:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [active, archived]
+        color:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    WorkspaceStats:
+      type: object
+      required: [scanCount, findingCount, evidenceCount, findingsByDay]
+      properties:
+        scanCount:
+          type: integer
+        findingCount:
+          type: integer
+        evidenceCount:
+          type: integer
+        reportCount:
+          type: integer
+        findingCounts:
+          $ref: "#/components/schemas/FindingCounts"
+        findingsByDay:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyCount"
+        topTools:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolCount"
+
+    FindingCounts:
+      type: object
+      required: [critical, high, medium, low, info, total]
+      properties:
+        critical:
+          type: integer
+        high:
+          type: integer
+        medium:
+          type: integer
+        low:
+          type: integer
+        info:
+          type: integer
+        total:
+          type: integer
+
+    DailyCount:
+      type: object
+      required: [date, count]
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+
+    ToolCount:
+      type: object
+      required: [tool, count]
+      properties:
+        tool:
+          type: string
+        count:
+          type: integer
+
+    # ── Scans ───────────────────────────────────────────────────────────────
+    Scan:
+      type: object
+      required: [id, workspaceId, tool, target, status, createdAt]
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        tool:
+          type: string
+        target:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed, stopped]
+        profile:
+          type: ["string", "null"]
+        options:
+          type: object
+          additionalProperties: true
+        progress:
+          type: ["integer", "null"]
+        startedAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        resultSummary:
+          type: ["string", "null"]
+        findingCount:
+          type: integer
+
+    ScanInput:
+      type: object
+      required: [tool, target]
+      properties:
+        tool:
+          type: string
+        target:
+          type: string
+        profile:
+          type: string
+        options:
+          type: object
+          additionalProperties: true
+
+    ScanDetail:
+      type: object
+      required: [scan, output, hosts]
+      properties:
+        scan:
+          $ref: "#/components/schemas/Scan"
+        output:
+          type: array
+          items:
+            type: string
+        hosts:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScanHost"
+        ports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScanPort"
+        rawOutput:
+          type: ["string", "null"]
+
+    ScanHost:
+      type: object
+      required: [ip, status]
+      properties:
+        ip:
+          type: string
+        hostname:
+          type: ["string", "null"]
+        status:
+          type: string
+        os:
+          type: ["string", "null"]
+        macVendor:
+          type: ["string", "null"]
+        ports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScanPort"
+
+    ScanPort:
+      type: object
+      required: [port, protocol, state]
+      properties:
+        port:
+          type: integer
+        protocol:
+          type: string
+        state:
+          type: string
+        service:
+          type: ["string", "null"]
+        version:
+          type: ["string", "null"]
+        banner:
+          type: ["string", "null"]
+
+    ReplayScanInput:
+      type: object
+      properties:
+        target:
+          type: ["string", "null"]
+        profile:
+          type: ["string", "null"]
+        options:
+          type: object
+          additionalProperties: true
+
+    # ── Findings ────────────────────────────────────────────────────────────
+    Finding:
+      type: object
+      required: [id, workspaceId, title, severity, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        title:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        status:
+          type: string
+          enum: [open, in_review, false_positive, accepted_risk, resolved, retest]
+        description:
+          type: ["string", "null"]
+        affectedAsset:
+          type: ["string", "null"]
+        cvss:
+          type: ["number", "null"]
+        cveIds:
+          type: array
+          items:
+            type: string
+        mitreIds:
+          type: array
+          items:
+            type: string
+        reproductionSteps:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        evidenceIds:
+          type: array
+          items:
+            type: string
+        scanId:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        discoveredAt:
+          type: ["string", "null"]
+
+    FindingInput:
+      type: object
+      required: [title, severity]
+      properties:
+        title:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        description:
+          type: string
+        affectedAsset:
+          type: string
+        cvss:
+          type: number
+        cveIds:
+          type: array
+          items:
+            type: string
+        mitreIds:
+          type: array
+          items:
+            type: string
+        reproductionSteps:
+          type: string
+        recommendation:
+          type: string
+        evidenceIds:
+          type: array
+          items:
+            type: string
+        scanId:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    FindingUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        status:
+          type: string
+          enum: [open, in_review, false_positive, accepted_risk, resolved, retest]
+        description:
+          type: ["string", "null"]
+        affectedAsset:
+          type: ["string", "null"]
+        cvss:
+          type: ["number", "null"]
+        cveIds:
+          type: array
+          items:
+            type: string
+        mitreIds:
+          type: array
+          items:
+            type: string
+        reproductionSteps:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        evidenceIds:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    FindingsSummary:
+      type: object
+      required: [counts, byStatus]
+      properties:
+        counts:
+          $ref: "#/components/schemas/FindingCounts"
+        byStatus:
+          type: object
+          additionalProperties:
+            type: integer
+        topAssets:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetCount"
+
+    AssetCount:
+      type: object
+      required: [asset, count]
+      properties:
+        asset:
+          type: string
+        count:
+          type: integer
+
+    # ── Evidence ────────────────────────────────────────────────────────────
+    Evidence:
+      type: object
+      required: [id, workspaceId, type, timestamp, sha256, size]
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        scanId:
+          type: ["string", "null"]
+        type:
+          type: string
+          enum: [raw_output, screenshot, packet_capture, file, exported_artifact, manual_note]
+        sourceTool:
+          type: ["string", "null"]
+        target:
+          type: ["string", "null"]
+        timestamp:
+          type: string
+        capturedBy:
+          type: string
+        sha256:
+          type: string
+        size:
+          type: integer
+        filename:
+          type: ["string", "null"]
+        metadata:
+          type: object
+          additionalProperties: true
+        notes:
+          type: ["string", "null"]
+
+    EvidenceInput:
+      type: object
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          enum: [raw_output, screenshot, packet_capture, file, exported_artifact, manual_note]
+        content:
+          type: string
+        target:
+          type: string
+        sourceTool:
+          type: string
+        scanId:
+          type: string
+        notes:
+          type: string
+
+    CustodyEntry:
+      type: object
+      required: [evidenceId, timestamp, action, actor]
+      properties:
+        evidenceId:
+          type: string
+        timestamp:
+          type: string
+        action:
+          type: string
+          enum: [created, accessed, copied, exported, modified, deleted]
+        actor:
+          type: string
+        destination:
+          type: ["string", "null"]
+        reason:
+          type: ["string", "null"]
+
+    # ── Dashboard ───────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required: [workspaceCount, activeWorkspaceCount, totalFindings, activeScans, totalEvidence]
+      properties:
+        workspaceCount:
+          type: integer
+        activeWorkspaceCount:
+          type: integer
+        totalFindings:
+          type: integer
+        criticalFindings:
+          type: integer
+        highFindings:
+          type: integer
+        activeScans:
+          type: integer
+        totalEvidence:
+          type: integer
+        scansToday:
+          type: integer
+        findingsByWorkspace:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceFindingCount"
+        meliDetected:
+          type: boolean
+        systemTools:
+          $ref: "#/components/schemas/SystemToolsSummary"
+
+    WorkspaceFindingCount:
+      type: object
+      required: [workspaceId, workspaceName, count]
+      properties:
+        workspaceId:
+          type: string
+        workspaceName:
+          type: string
+        count:
+          type: integer
+        critical:
+          type: integer
+
+    SystemToolsSummary:
+      type: object
+      required: [installed, missing, total]
+      properties:
+        installed:
+          type: integer
+        missing:
+          type: integer
+        total:
+          type: integer
+
+    ActivityItem:
+      type: object
+      required: [id, type, timestamp, workspaceId, workspaceName, description]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [scan_started, scan_completed, finding_added, evidence_captured, report_generated, workspace_created]
+        timestamp:
+          type: string
+        workspaceId:
+          type: string
+        workspaceName:
+          type: string
+        description:
+          type: string
+        severity:
+          type: ["string", "null"]
+        tool:
+          type: ["string", "null"]
+        target:
+          type: ["string", "null"]
+
+    # ── Tools ───────────────────────────────────────────────────────────────
+    DnsLookupInput:
+      type: object
+      required: [target]
+      properties:
+        target:
+          type: string
+        recordTypes:
+          type: array
+          items:
+            type: string
+        resolver:
+          type: ["string", "null"]
+
+    DnsLookupResult:
+      type: object
+      required: [target, records]
+      properties:
+        target:
+          type: string
+        records:
+          type: array
+          items:
+            $ref: "#/components/schemas/DnsRecord"
+
+    DnsRecord:
+      type: object
+      required: [type, value, ttl]
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+        ttl:
+          type: integer
+
+    WhoisInput:
+      type: object
+      required: [target]
+      properties:
+        target:
+          type: string
+
+    WhoisResult:
+      type: object
+      required: [target, raw]
+      properties:
+        target:
+          type: string
+        registrar:
+          type: ["string", "null"]
+        registeredDate:
+          type: ["string", "null"]
+        expiresDate:
+          type: ["string", "null"]
+        nameservers:
+          type: array
+          items:
+            type: string
+        registrant:
+          type: ["string", "null"]
+        raw:
+          type: string
+
+    HashInput:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        algorithms:
+          type: array
+          items:
+            type: string
+
+    HashResult:
+      type: object
+      required: [input, hashes]
+      properties:
+        input:
+          type: string
+        hashes:
+          type: object
+          additionalProperties:
+            type: string
+
+    EncodeInput:
+      type: object
+      required: [text, encoding, mode]
+      properties:
+        text:
+          type: string
+        encoding:
+          type: string
+        mode:
+          type: string
+          enum: [encode, decode]
+
+    EncodeResult:
+      type: object
+      required: [input, output, encoding, mode]
+      properties:
+        input:
+          type: string
+        output:
+          type: string
+        encoding:
+          type: string
+        mode:
+          type: string
+
+    IdentifyHashInput:
+      type: object
+      required: [hash]
+      properties:
+        hash:
+          type: string
+
+    IdentifyHashResult:
+      type: object
+      required: [hash, candidates]
+      properties:
+        hash:
+          type: string
+        candidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/HashCandidate"
+
+    HashCandidate:
+      type: object
+      required: [algorithm, confidence, hashcatMode, johnFormat]
+      properties:
+        algorithm:
+          type: string
+        confidence:
+          type: string
+        hashcatMode:
+          type: ["string", "null"]
+        johnFormat:
+          type: ["string", "null"]
+
+    SslAnalysisInput:
+      type: object
+      required: [host]
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+
+    SslAnalysisResult:
+      type: object
+      required: [host, port, grade]
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+        grade:
+          type: string
+        subject:
+          type: ["string", "null"]
+        issuer:
+          type: ["string", "null"]
+        validFrom:
+          type: ["string", "null"]
+        validTo:
+          type: ["string", "null"]
+        daysUntilExpiry:
+          type: ["integer", "null"]
+        protocols:
+          type: array
+          items:
+            type: string
+        ciphers:
+          type: array
+          items:
+            type: string
+        vulnerabilities:
+          type: array
+          items:
+            $ref: "#/components/schemas/SslVulnerability"
+        securityHeaders:
+          type: object
+          additionalProperties:
+            type: string
+
+    SslVulnerability:
+      type: object
+      required: [name, vulnerable]
+      properties:
+        name:
+          type: string
+        vulnerable:
+          type: boolean
+        details:
+          type: ["string", "null"]
+
+    HeaderAnalysisInput:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+
+    HeaderAnalysisResult:
+      type: object
+      required: [url, grade, headers, missing, issues]
+      properties:
+        url:
+          type: string
+        grade:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        missing:
+          type: array
+          items:
+            type: string
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/HeaderIssue"
+
+    HeaderIssue:
+      type: object
+      required: [header, severity, description]
+      properties:
+        header:
+          type: string
+        severity:
+          type: string
+        description:
+          type: string
+        recommendation:
+          type: ["string", "null"]
+
+    JwtAnalysisInput:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+        secret:
+          type: ["string", "null"]
+
+    JwtAnalysisResult:
+      type: object
+      required: [token, header, payload, issues]
+      properties:
+        token:
+          type: string
+        header:
+          type: object
+          additionalProperties: true
+        payload:
+          type: object
+          additionalProperties: true
+        algorithm:
+          type: ["string", "null"]
+        expired:
+          type: ["boolean", "null"]
+        signatureValid:
+          type: ["boolean", "null"]
+        issues:
+          type: array
+          items:
+            type: string
+
+    ReverseShellInput:
+      type: object
+      required: [lhost, lport]
+      properties:
+        lhost:
+          type: string
+        lport:
+          type: integer
+        languages:
+          type: array
+          items:
+            type: string
+        encoding:
+          type: ["string", "null"]
+
+    ReverseShellResult:
+      type: object
+      required: [shells]
+      properties:
+        shells:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReverseShell"
+
+    ReverseShell:
+      type: object
+      required: [language, command, description]
+      properties:
+        language:
+          type: string
+        command:
+          type: string
+        description:
+          type: string
+        encoded:
+          type: ["string", "null"]
+
+    IpIntelInput:
+      type: object
+      required: [ip]
+      properties:
+        ip:
+          type: string
+        sources:
+          type: array
+          items:
+            type: string
+
+    IpIntelResult:
+      type: object
+      required: [ip]
+      properties:
+        ip:
+          type: string
+        country:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        asn:
+          type: ["string", "null"]
+        org:
+          type: ["string", "null"]
+        isTor:
+          type: boolean
+        isVpn:
+          type: boolean
+        isKnownMalicious:
+          type: boolean
+        abuseScore:
+          type: ["integer", "null"]
+        vtMalicious:
+          type: ["integer", "null"]
+        reverseDns:
+          type: ["string", "null"]
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/IntelSource"
+
+    IntelSource:
+      type: object
+      required: [name, available, data]
+      properties:
+        name:
+          type: string
+        available:
+          type: boolean
+        data:
+          type: object
+          additionalProperties: true
+        error:
+          type: ["string", "null"]
+
+    HibpInput:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          enum: [email, password]
+        value:
+          type: string
+
+    HibpResult:
+      type: object
+      required: [found, count]
+      properties:
+        found:
+          type: boolean
+        count:
+          type: integer
+        breaches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Breach"
+
+    Breach:
+      type: object
+      required: [name, breachDate]
+      properties:
+        name:
+          type: string
+        breachDate:
+          type: string
+        dataClasses:
+          type: array
+          items:
+            type: string
+        description:
+          type: ["string", "null"]
+        isVerified:
+          type: boolean
+
+    # ── Plugins ─────────────────────────────────────────────────────────────
+    Plugin:
+      type: object
+      required: [id, name, category, description, author, version, enabled]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        author:
+          type: string
+        version:
+          type: string
+        enabled:
+          type: boolean
+        hasNetworkAccess:
+          type: boolean
+        hasFilesystemAccess:
+          type: boolean
+        hasSubprocessAccess:
+          type: boolean
+        loadedAt:
+          type: ["string", "null"]
+        error:
+          type: ["string", "null"]
+
+    PluginToggleInput:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+
+    # ── Reports ─────────────────────────────────────────────────────────────
+    Report:
+      type: object
+      required: [id, workspaceId, type, format, status, createdAt]
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        type:
+          type: string
+          enum: [engagement, findings, evidence, scan, threat_intel, compliance, comparison, daily]
+        format:
+          type: string
+          enum: [pdf, markdown, docx, xlsx, html, json, sarif]
+        status:
+          type: string
+          enum: [generating, ready, failed]
+        title:
+          type: ["string", "null"]
+        findingCount:
+          type: integer
+        size:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+        options:
+          type: object
+          additionalProperties: true
+
+    ReportInput:
+      type: object
+      required: [type, format]
+      properties:
+        type:
+          type: string
+          enum: [engagement, findings, evidence, scan, threat_intel, compliance, comparison, daily]
+        format:
+          type: string
+          enum: [pdf, markdown, docx, xlsx, html, json, sarif]
+        title:
+          type: string
+        options:
+          type: object
+          additionalProperties: true
+
+    # ── Scheduler ───────────────────────────────────────────────────────────
+    Schedule:
+      type: object
+      required: [id, workspaceId, tool, target, cronExpression, enabled, createdAt]
+      properties:
+        id:
+          type: string
+        workspaceId:
+          type: string
+        tool:
+          type: string
+        target:
+          type: string
+        cronExpression:
+          type: string
+        enabled:
+          type: boolean
+        lastRun:
+          type: ["string", "null"]
+        nextRun:
+          type: ["string", "null"]
+        lastStatus:
+          type: ["string", "null"]
+        options:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+
+    ScheduleInput:
+      type: object
+      required: [tool, target, cronExpression]
+      properties:
+        tool:
+          type: string
+        target:
+          type: string
+        cronExpression:
+          type: string
+        options:
+          type: object
+          additionalProperties: true
