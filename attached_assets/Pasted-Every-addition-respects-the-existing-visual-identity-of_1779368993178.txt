@@ -1,0 +1,992 @@
+Every addition respects the existing visual identity — off-white/cream + transparency + blur, matrix scramble effects, cloud+lightning pulsating logo, active border glow on events.
+Settings cog on every new view. No exceptions. Local + master settings.
+Each new feature integrates with the existing workspace, evidence, findings, and plugin systems. No isolated islands.
+Backward compatible. Existing v1.0 data, configs, workspaces all continue to work.
+
+
+FEATURE 1 — Onboarding Tour
+Purpose
+First-time users get oriented in 5 minutes without reading docs. Drops them into a real workflow.
+Implementation
+Interactive guided tour that fires on first launch after the authorization gate and setup wizard finish. Optional, fully skippable, persistent skip (remembered across launches).
+Tour flow
+
+Welcome card — full-screen welcome with the cloud+lightning logo pulsating, brief explainer of what GodsApp is. Two buttons: "Take the tour" / "Skip — I know what I'm doing"
+Step 1 — Workspaces — highlight the workspaces sidebar item. Tooltip points to it, "Workspaces are isolated engagement environments. Each one has its own findings, evidence, notes, and scans. Let's create your first one."
+Step 2 — Create workspace — opens the new-workspace dialog with sample values pre-filled and a "Use this sample workspace" button. Creates a workspace called "Tutorial — Practice Engagement" with scope 127.0.0.1, localhost, 192.168.0.0/24 pre-populated.
+Step 3 — Run your first scan — guides them to Network Recon → Nmap. Pre-fills target 127.0.0.1. They click "Run Scan". The scan executes against their own machine (safe). Results appear in real-time.
+Step 4 — Promote to finding — guides them to right-click on a scan result and "Promote to Finding". Sample finding gets created with auto-populated metadata, severity tag, and links to evidence.
+Step 5 — Evidence locker — guides them to evidence locker. Shows them the auto-captured scan output, the chain of custody log, and the verify integrity button.
+Step 6 — Notes sandbox — guides them to notes (Feature 6 below), shows them how to embed findings/evidence in notes.
+Step 7 — Reports — generates a sample PDF report from the tutorial workspace. Opens it. Lets them see what their output will look like.
+Step 8 — Settings tour — shows them where global settings vs per-category settings live. Walks through API keys, theme, plugins.
+Step 9 — Meli integration check — if Meli is detected, shows the integration panel. If not, explains what it would unlock.
+Final — "You're ready. Want to delete the tutorial workspace, or keep it for reference?" Two buttons.
+
+Visual treatment
+
+Each step uses the existing matrix-scramble effect on tooltip text appearance
+Spotlight effect: the rest of the UI dims to ~40% opacity, the target element gets a glowing pulsating border (matches the event-border-pulse effect, but stays solid)
+"Next" / "Back" / "Skip tour" controls always visible at bottom
+Progress dots showing step X of 11 at top of the tooltip
+
+Settings (Onboarding Settings sub-page in main Settings)
+
+Re-run tour now (button)
+Reset onboarding state (button — re-fires on next launch)
+Tour pace (Quick / Standard / Thorough — controls how much explainer text is shown)
+Enable feature spotlights on first use of new features (toggle — when a user opens a tool they've never used before, a small pulse highlights its key controls)
+
+
+FEATURE 2 — Learn Mode
+Purpose
+Inline tutorials and contextual help inside every tool. Toggle on for beginners, off for power users.
+Implementation
+Global toggle in Settings → General → Learn Mode. When ON:
+
+Every tool screen shows expanded helper panels
+Every option has hover tooltips with full explanations
+Examples and "what not to do" warnings appear inline
+A Learn button in each tool's top right that opens a fuller tutorial overlay
+
+When OFF, the UI is clean for experts — just labels and controls, no helper text.
+Per-tool Learn content (built-in, ships with v1.1)
+Each tool gets a structured Learn record with these sections:
+
+What is this — 2-sentence summary
+When to use it — when it's the right tool for the job
+How to use it — step-by-step example with a screenshot
+Common options explained — every checkbox, dropdown, and field
+Examples — 3 real-world example commands/configurations
+What not to do — common pitfalls, illegal uses, false positive traps
+Related tools — links to complementary tools in GodsApp
+External references — links to vendor docs, MITRE ATT&CK techniques, CVE references
+
+Learn overlay UI
+When user clicks the Learn button:
+
+Slides in from the right side, 40% screen width
+Frosted blur on the rest of the UI
+Markdown-rendered content
+Search within Learn content (Ctrl+F)
+"Mark as read" toggle (collapses on future opens until manually expanded)
+"Suggest improvement" button — opens a small feedback form that gets saved to a local Learn-suggestions file the user can review and submit
+
+Tooltip behavior
+When Learn Mode is on:
+
+Hovering any UI element for >800ms shows an explanatory tooltip
+Tooltips can have images, code samples, links
+Click a tooltip to "pin" it open until clicked again
+Keyboard shortcut ? while hovering shows the tooltip immediately
+
+Difficulty badges
+Each tool gets a difficulty badge in the sidebar:
+
+🟢 Beginner — safe defaults, easy to use
+🟡 Intermediate — requires some context
+🔴 Expert — destructive potential, requires authorization care
+
+Difficulty badges show even with Learn Mode off so users know what they're getting into.
+Settings (Learn Mode sub-page)
+
+Master toggle on/off
+Default expansion state for helper panels (expanded / collapsed)
+Tooltip delay (ms slider)
+Hide difficulty badges (toggle)
+Reset all "mark as read" flags (button)
+Contribute Learn content (link to where users can submit improvements)
+
+
+FEATURE 3 — Workspace Templates
+Purpose
+Speed up workspace creation for common engagement types. Pre-configure tools, notes structure, default reports.
+Implementation
+Add a "Templates" tab to the new-workspace dialog. Pick a template, the workspace gets created pre-populated.
+Built-in templates
+
+Blank Workspace — what currently exists, nothing pre-filled
+Bug Bounty — Web Target — scope field expects a wildcard domain, pre-creates Notes/, Recon/, Vulnerabilities/, Reports/ folders, sets default report format to Markdown (most bug bounty programs want this), enables HTTP Proxy by default
+External Penetration Test — scope field expects IPs/CIDRs, default report format DOCX (Executive Summary template), enables Nmap full scan profile, enables vuln scanner with all severities
+Internal Penetration Test — assumes /24 or larger networks, enables ARP scanner + service fingerprinter + AD recon tools, default reports include domain controllers and credential findings sections
+Red Team Engagement — emphasizes stealth — disables aggressive Nmap timing by default, enables proxy/Tor by default, includes campaign tracking fields (operation name, ROE summary, deconfliction contacts)
+Threat Hunt — focuses on intelligence gathering, no active exploitation tools enabled by default, IP Intel + Domain Intel + Threat Feeds prominent, evidence locker auto-captures every IP investigation
+Forensics Investigation — read-only by default (no scanners enabled), pre-creates Evidence/, Timeline/, IOCs/, Analysis/, Reports/ folders, evidence chain of custody mandatory on all imports, hash verification enabled for all uploaded files
+CTF (Capture the Flag) — encourages learning, all tools enabled, no authorization gate prompts, fast-mode toggle (skips confirmations), points-tracker field, flag-tracker text area
+Compliance Audit — generates compliance-focused reports (PCI DSS, HIPAA, SOC 2, ISO 27001 templates), MITRE ATT&CK matrix view by default, findings auto-tagged with applicable framework controls
+Home Lab / Personal Research — relaxed safety prompts, easier defaults, encourages experimentation
+
+Custom templates
+Users can save any existing workspace AS a template via "Save as Template..." button. Custom templates show in the picker under a "My Templates" section. Templates can be exported as JSON files and imported by others.
+Template content
+Each template defines:
+
+Default scope examples (placeholder text)
+Default folder structure in the workspace's notes/evidence
+Default enabled/disabled tools per category
+Default report template
+Default severity threshold for report inclusion
+Default findings tags
+Default Learn Mode setting for the workspace
+Pre-populated notes (e.g. "Engagement Charter" template, "Rules of Engagement" template)
+Default integrations enabled (e.g. Bug Bounty template auto-enables HackerOne/Bugcrowd integration if API keys are configured)
+
+Settings (Workspace Templates sub-page)
+
+Browse built-in templates
+Manage custom templates (list, edit, delete, export, import)
+Set default template for new workspaces
+Allow community templates from marketplace URL (toggle + URL)
+
+
+FEATURE 4 — Findings Deduplication & Chaining
+Purpose
+Multiple tools often report the same underlying issue. Auto-merge them. Also let users link related findings.
+Implementation
+Deduplication
+When a new finding is created, GodsApp checks for similar existing findings in the same workspace based on:
+
+Same affected asset
+Same CVE reference
+Same CWE classification
+Same Nuclei template ID / SQLMap technique / etc.
+Fuzzy match on title and description
+
+If a match scores above a configurable threshold (default 0.85), the user is prompted:
+
+"This finding may be a duplicate of <existing finding>. Merge?"
+Options: Merge (combines evidence, keeps the higher severity), Keep both (links them as "Related"), Cancel new finding
+
+Manual merge: select 2+ findings → right-click → Merge.
+Chaining
+Findings can be linked with typed relationships:
+
+Enables — Finding A makes Finding B exploitable
+Caused by — Finding A is the root cause of Finding B
+Mitigates — Finding A would prevent Finding B
+Related to — Generic relationship
+Duplicate of — Same issue, different report
+
+Chain visualization: in the Findings view, click "Chain View" toggle to switch from table view to a graph view showing finding relationships. Drag nodes around. Filter by severity.
+Reports can include a "Finding Chains" section showing exploitation paths.
+Implementation details
+
+Dedup threshold configurable in Findings Settings
+Auto-dedup on/off toggle
+Always-prompt-on-creation toggle
+Background dedup analysis (periodic check for duplicates in existing findings)
+Chain depth limit (default 10 — prevents infinite loops)
+Visual graph uses D3.js (already in tech stack per v1.0)
+
+Settings (Findings — Dedup & Chaining sub-section)
+
+Dedup similarity threshold slider (0.5 to 1.0)
+Auto-merge if score above (slider — auto-merge for very high confidence)
+Always prompt before merging (toggle)
+Enabled fields for dedup matching (checkboxes: title, asset, CVE, CWE, template ID, etc.)
+Chain view default layout (force-directed, hierarchical, circular)
+Chain node color scheme
+
+
+FEATURE 5 — Command Palette (Ctrl+K)
+Purpose
+Single keyboard shortcut to do anything in GodsApp. Same pattern as VS Code, Linear, Notion, Cmd+K everywhere.
+Implementation
+Ctrl+K (or Cmd+K on Mac) opens a center-screen palette overlay with frosted blur backdrop and matrix-scramble effect on results.
+Palette structure
+Input field at top. As user types, results appear below grouped by category. Categories:
+
+Navigation — jump to any view (Dashboard, Workspaces, Network Recon, etc.)
+Workspaces — switch to any workspace, create new, search by name/scope
+Tools — launch any tool with optional pre-fill (e.g. "nmap 10.0.0.0/24" launches Nmap pre-targeted)
+Findings — fuzzy search across all findings in all workspaces
+Evidence — search across all evidence by filename, hash, or content (where indexed)
+Settings — jump directly to any settings sub-page
+Recent — recently accessed items
+Actions — common actions like "Create finding", "Generate report", "Lock app", "Run last scan again", "Export workspace"
+Plugins — launch installed plugins
+
+Search behavior
+
+Fuzzy matching across all categories
+Recent results prioritized
+Keyboard navigation: arrow keys, Enter to select, Esc to close
+Tab cycles through categories
+"Open in new tab/window" with Ctrl+Enter where applicable
+
+Power features
+
+Slash commands — type /scan nmap 10.0.0.1 to instantly start an Nmap scan against that target without leaving the palette
+Tagged search — type #critical to find all critical findings, @workspace-name to scope search to a workspace, > to enter command mode
+Search history — up arrow recalls previous searches
+Plugin actions — third-party plugins can register their own palette actions
+
+Visual treatment
+
+Slide-in from center with 200ms fade
+Frosted blur on the rest of UI
+Result list uses matrix-scramble effect on text appearance
+Selected result has the active-border pulse effect
+Category headers in slight cream tone, content in primary text color
+
+Settings (Command Palette Settings sub-page)
+
+Keyboard shortcut customization (default Ctrl+K, can change to Ctrl+P, Ctrl+Shift+P, etc.)
+Categories to show (checkboxes)
+Max results per category (slider)
+Fuzzy match sensitivity (slider)
+Show recent (toggle)
+Recent count to remember (slider)
+Enable slash commands (toggle)
+Enable plugin actions in palette (toggle)
+Index evidence file contents for search (toggle — disables for performance on large evidence sets)
+
+
+FEATURE 6 — Notes Sandbox
+Purpose
+Built-in Markdown notes per workspace, with embedded findings, evidence, and screenshots. Replaces the need to switch to Obsidian/Notion/sticky-notes during engagements.
+Implementation
+New top-level sidebar item: Notes (below Findings, above Replay Engine).
+Notes structure
+
+Each workspace has its own notes directory at ~/.local/share/godsapp/workspaces/<uuid>/notes/
+Notes are real .md files on disk (user can edit them externally too — GodsApp picks up changes via file watcher)
+Folder structure with arbitrary nesting
+Top-level note "Engagement Overview.md" auto-created with a template (engagement name, dates, scope, RoE, contacts)
+Each finding can have its own note auto-created via right-click "Add notes for this finding"
+
+Editor
+
+Live preview Markdown editor
+Split view (source / preview / both) toggle
+Syntax highlighting for code blocks
+Spell check (toggleable)
+Word count + reading time at bottom
+Tables (with table editor UI)
+Mermaid diagrams (rendered live)
+Math/LaTeX support
+Image paste — paste a screenshot, image gets saved to the workspace's evidence/screenshots folder and embedded
+File paste — paste any file, gets saved to evidence and linked
+
+Embeddable references
+In a note, type:
+
+[[finding:abc-123]] — renders a clickable finding card with severity tag, title, and link
+[[evidence:xyz-789]] — renders an evidence card with type, hash, and preview link
+[[scan:def-456]] — renders scan summary card
+[[ip:1.2.3.4]] — renders IP card with all known info (country, hits, etc.)
+[[workspace:other-workspace-name]] — links to another workspace
+[[note:other-note-path]] — internal note link
+
+These references update live — if you rename a finding, the reference updates in all notes.
+Tags & metadata
+
+#tagname anywhere creates a tag — clickable, filters notes by tag
+YAML frontmatter supported for metadata (title, date, author, tags, related findings)
+Daily Notes feature — auto-creates Daily/YYYY-MM-DD.md each day
+
+Search
+
+Global search across all notes in all workspaces from the Command Palette
+Workspace-scoped search inside the Notes view
+Full-text search index (SQLite FTS5)
+
+Templates
+
+Custom note templates user can create
+Built-in templates: Pentest Daily Log, Finding Detail, Engagement Charter, Lessons Learned, IOC Tracker, Asset Inventory
+
+Export
+
+Single note → PDF, HTML, DOCX
+Entire workspace notes → bundled PDF (table of contents auto-generated)
+Plain Markdown export with all embeds resolved or kept as links
+
+Settings (Notes Settings sub-page)
+
+Default editor (source / preview / split)
+Auto-save interval
+Spell check toggle + language
+Theme (light / dark / inherit from app theme)
+Default folder structure for new workspaces
+File watcher enabled (picks up external edits)
+Image storage location (evidence/screenshots or separate)
+Daily Notes enabled + location
+Custom templates manager
+Export defaults (format, include embeds, watermark)
+
+
+FEATURE 7 — AI Assistant Panel (Opt-In)
+Purpose
+Optional AI helper that can summarize findings, suggest next steps, explain CVEs, and draft text. Off by default. User brings their own API key.
+Implementation
+Side panel that toggles open with Ctrl+\ or click an icon in the top bar.
+Capabilities
+The AI can:
+
+Summarize a scan result in plain English
+Suggest next steps based on current findings ("You found SMBv1 enabled — recommended next steps: …")
+Explain a CVE in user-friendly language
+Help write a finding's Recommendation section (drafts text the user can edit)
+Translate technical findings to executive summary language for reports
+Generate report introduction/conclusion text
+Code review for plugin development
+Explain Nmap/Nuclei output
+Convert payloads between formats
+Help compose a HackerOne/Bugcrowd report based on a finding
+
+Provider support
+BYO API key — user picks their preferred provider:
+
+Anthropic Claude (paid, requires API key from console.anthropic.com)
+OpenAI (paid, requires API key)
+Local Ollama (free, requires Ollama running locally on user's machine)
+Custom HTTP endpoint (for self-hosted models)
+
+Privacy controls
+
+Off by default. AI panel toggle in Settings → AI Assistant → Enable.
+All requests routed to user-configured endpoint only.
+Local-only by default (Ollama recommended).
+Privacy mode option — when on, sensitive data (IPs, hostnames, credentials, evidence) gets redacted before being sent to the AI. User can review the redacted prompt before sending.
+Per-workspace toggle to disable AI assistant for sensitive engagements.
+Logging — every AI interaction logged to audit log so user can review what was sent.
+Rate limiting per provider quota.
+
+UI
+
+Slides in from right, 30% width
+Frosted blur on the rest
+Chat-style interface
+Context-aware — when active, sees the current view (current finding, current scan results, current workspace summary) and includes that context in prompts
+"Context preview" — user can see exactly what's being sent before sending
+Save useful AI responses to notes with one click
+
+Settings (AI Assistant Settings sub-page)
+
+Master enable toggle (OFF by default)
+Provider selection (Anthropic / OpenAI / Ollama / Custom)
+API key field (encrypted at rest)
+Model selection (claude-sonnet-4, gpt-4, llama3, etc.)
+Max tokens per request
+Temperature
+Privacy mode toggle (redact sensitive data)
+Per-data-type redaction rules (IPs, hostnames, credentials, hashes — each toggleable)
+Allowed workspaces (allowlist, blocklist, or all)
+Audit log everything (toggle, default ON)
+Custom system prompt (advanced — user can set the AI's persona/instructions)
+Rate limit per hour
+Stream responses (toggle)
+Save useful responses to a "AI Suggestions" notes folder automatically (toggle)
+
+
+FEATURE 8 — CVSS Calculator
+Purpose
+Most pentest reports have wrong CVSS scores because people guess. Interactive calculator built in.
+Implementation
+When creating or editing a finding, the CVSS score field has a "Build score" button. Clicking it opens an interactive vector builder.
+CVSS v3.1 + v4.0 support
+
+Pick CVSS version (default v3.1)
+Interactive vector builder with explanations for each metric
+Real-time score calculation
+Severity classification updates as user picks options (None / Low / Medium / High / Critical)
+Vector string updates live (e.g. CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H)
+Final score commits to the finding when user clicks Save
+
+Metric explanations
+Each metric has hover-help explaining what it means:
+
+Attack Vector (Network / Adjacent / Local / Physical)
+Attack Complexity (Low / High)
+Privileges Required (None / Low / High)
+User Interaction (None / Required)
+Scope (Unchanged / Changed)
+Confidentiality / Integrity / Availability Impact (None / Low / High)
+
+For CVSS v4.0: includes the supplemental metrics (Safety, Automatable, Recovery, Value Density, Vulnerability Response Effort, Provider Urgency, Modified base/environmental metrics).
+Calculator features
+
+Import existing CVSS vector string and visualize it
+Compare two CVSS scores side by side
+Bulk recalculation — recalculate all findings in a workspace under a new CVSS version
+CVE auto-import — paste a CVE ID, fetches the official CVSS score from NVD
+
+Settings (CVSS Calculator sub-page)
+
+Default CVSS version (3.1 / 4.0)
+Show explanations by default (toggle)
+Auto-import CVE scores when finding has CVE reference (toggle)
+Environmental modifiers default values (user can set company-specific defaults)
+
+
+FEATURE 9 — Report Studio
+Purpose
+Drag-and-drop report builder so users can create custom report templates. The pentest industry suffers from bad reports — this differentiates GodsApp.
+Implementation
+A new top-level Settings sub-page: Report Studio. Also accessible via Reports → "Customize Templates".
+Editor
+Visual report builder with two panes:
+
+Left: Available sections palette (drag from here)
+Right: Live preview of the report being built
+
+Section library
+Built-in sections:
+
+Cover Page (logo, title, client name, dates, classification banner)
+Executive Summary
+Engagement Overview (scope, methodology, dates)
+Methodology Section
+Findings Summary (count by severity table + chart)
+Findings Detail (one per finding, with severity-coded headers)
+Evidence Appendix
+Recommendations
+Remediation Roadmap
+MITRE ATT&CK Coverage Matrix
+Threat Landscape (auto-populated from Meli if detected)
+Tools Used
+Sign-off Page
+Custom Markdown Block (user-supplied content)
+Image / Diagram Insert
+Page Break
+Conditional Section (only render if condition met, e.g. "only if any Critical findings")
+
+Customization
+
+Each section has editable parameters (e.g. Findings Detail can be filtered by severity, sorted, grouped)
+Per-section styling (heading style, font size, colors)
+Variable substitution (e.g. {{workspace.name}}, {{date}}, {{author}}, {{finding_count.critical}})
+Header/footer customization with variables
+Watermark options (text, image, opacity)
+Page numbering style
+
+Template management
+
+Save templates to library
+Share templates as JSON exports
+Built-in templates: Executive Brief, Technical Deep Dive, Bug Bounty Report, Compliance Audit, Red Team Operation Report
+Per-workspace default template
+
+Output formats
+Same as v1.0: PDF, Markdown, DOCX, XLSX, HTML, JSON, SARIF. The Studio handles each format's quirks (e.g. PDF gets proper page breaks, DOCX gets style maps, Markdown gets clean front matter).
+Settings (Report Studio sub-page)
+
+Default template per workspace type
+Author/organization defaults
+Logo manager
+Color scheme defaults (PDF/HTML)
+Font choices
+Page size / margins
+Watermark defaults
+Auto-generate executive summary using AI Assistant if enabled (toggle)
+Confidentiality marking defaults (TLP red/amber/green/clear)
+
+
+FEATURE 10 — Integrations Hub
+Purpose
+Connect GodsApp to the rest of the security workflow ecosystem.
+Implementation
+New top-level Settings sub-page: Integrations. List of supported integrations with status (Configured / Not Configured), enable/disable, configure button.
+Supported integrations
+Bug Bounty Platforms
+
+HackerOne — pull program scope, submit reports as drafts, track report status
+Bugcrowd — same as above
+Intigriti — same
+YesWeHack — same
+
+Issue Trackers
+
+Jira — push findings as tickets, sync status, attach evidence
+Linear — push findings as issues
+GitHub Issues — push findings to a repo's issues
+GitLab Issues — same
+Azure DevOps Boards — same
+
+Chat & Notifications
+
+Slack — webhook for critical findings alerts, scan completion, workspace activity
+Discord — same
+Microsoft Teams — same
+Email (SMTP) — daily digest, critical alerts
+
+Note-Taking
+
+Obsidian — export workspace notes as an Obsidian vault structure
+Logseq — same with Logseq journal format
+Notion — API push of findings + notes
+Joplin — same
+
+Threat Intel Platforms
+
+MISP — already in v1.0 spec, expanded here with bidirectional sync
+OpenCTI — push findings as observables and reports
+TheHive — push findings as cases with TTPs
+
+Cloud Storage / Backup
+
+S3-compatible (AWS, Backblaze B2, MinIO, etc.) — encrypted workspace backups
+Google Drive — encrypted backups (OAuth flow)
+Dropbox — same
+Custom rclone targets
+
+Authentication / SSO
+
+OIDC provider support for team mode
+LDAP for enterprise
+
+Vulnerability Databases
+
+NVD API — auto-enrich CVE references
+VulnDB
+Exploit-DB API
+GitHub Security Advisories
+
+Compliance Frameworks
+
+Auto-map findings to PCI DSS controls
+HIPAA Security Rule mapping
+SOC 2 Type II controls
+ISO 27001 Annex A controls
+NIST 800-53 / 800-171
+
+Integration framework
+Each integration follows a common pattern:
+
+Configure (credentials, endpoints, scope)
+Test connection (button — verifies the integration works)
+Enable/disable
+Last sync status, last error
+Logs (recent activity from this integration)
+Per-workspace override (an integration can be enabled globally but disabled for specific sensitive workspaces)
+
+Integrations are also exposed to plugins via the plugin API so third-party plugins can register their own.
+Settings (Integrations Settings sub-page)
+
+All the integration configuration UIs
+Master enable/disable
+Integration audit log (every action logged)
+Rate limiting per integration
+Encryption keys for credential storage
+
+
+FEATURE 11 — Asset Timeline / Change History
+Purpose
+For any IP, hostname, domain, or other asset, show a unified timeline of "what changed since we last looked."
+Implementation
+When viewing any asset (right-click → "View Asset Timeline" or via Command Palette), opens a timeline view.
+Timeline content
+For each scan that included this asset, a timeline node shows:
+
+Date/time of scan
+Tool used
+Key observations (open ports, services, banners, certificates, etc.)
+Any findings created from that scan
+
+Diff visualization
+Between consecutive scans, GodsApp computes a diff:
+
+New ports opened (red dot)
+Ports closed (gray strikethrough)
+Service version changes (yellow)
+New certificates / cert changes (orange)
+New banners / HTTP headers (light blue)
+WHOIS changes
+DNS record changes
+New subdomains discovered
+New findings affecting this asset
+
+Visualization
+
+Horizontal timeline with date markers
+Click any point to see full details for that scan
+Filter by tool, date range, severity
+Export timeline as PDF for inclusion in reports
+"Compare two points" — pick two timeline nodes, see a full diff
+
+Cross-workspace
+Optional: include data about this asset from OTHER workspaces (if user has permission and explicitly enables). Helps long-term threat tracking of recurring infrastructure.
+Settings (Asset Timeline sub-page)
+
+Enable cross-workspace asset tracking (toggle)
+Diff sensitivity (how many changes to surface)
+Default timeline date range
+Auto-refresh interval
+
+
+FEATURE 12 — Saved Searches & Smart Views
+Purpose
+"All Critical findings in the last 7 days across all workspaces" — save that as a sidebar item.
+Implementation
+Smart View definition
+A Smart View is a saved filter that runs live. Each Smart View has:
+
+Name (e.g. "Active Critical Findings")
+Scope (current workspace / all workspaces / specific list)
+Filter criteria (severity, status, asset, tags, date range, etc.)
+Display style (list / table / chart)
+Sort order
+Auto-refresh interval
+
+Built-in Smart Views
+
+All Critical Findings
+Unverified Findings (status = open, no assignee)
+High-Risk Recurring IPs (IPs that appear in findings across multiple workspaces)
+Recent Evidence (last 24h)
+Scheduled Scans Due Today
+Plugins With Errors
+
+Custom Smart Views
+User creates their own from the Findings, Evidence, Scans, or Assets views by:
+
+Apply filters
+Click "Save as Smart View"
+Give it a name
+Pick a position in the sidebar
+
+Smart View sidebar
+A new section in the left sidebar called "Smart Views" — list of saved views with live counters. Click to open. Counters update in real time.
+Notifications on Smart Views
+A Smart View can have an alert rule:
+
+"Notify me when this Smart View's count changes"
+"Notify me when a specific Smart View is non-empty"
+
+Settings (Smart Views sub-page)
+
+Manage Smart Views (list, edit, delete, reorder)
+Default refresh interval
+Show counters in sidebar (toggle)
+Pinned Smart Views (always visible at top of sidebar)
+Notification rules per Smart View
+
+
+FEATURE 13 — Activity Feed / Time Tracking
+Purpose
+Personal productivity view — "today I ran 5 scans, created 3 findings, spent 4 hours in Workspace A."
+Implementation
+A new sidebar item: Activity Feed.
+Activity tracking
+GodsApp passively logs every user action:
+
+Scans started/completed
+Findings created/edited/closed
+Reports generated
+Evidence captured
+Workspaces switched
+Time spent in each workspace
+
+Views
+Today's activity — chronological feed of everything done today.
+Time tracking — bar chart showing time per workspace, per tool category, per task type. Helps with billing (consultants love this).
+Weekly summary — Sunday → Saturday recap. Shareable as image or PDF.
+Productivity stats — average findings per engagement, average scan throughput, most-used tools.
+Manual entries
+User can manually log activities (e.g. "Meeting with client" / "Phone call about scope" / "Tool research" / "Report writing"). Counts toward time tracking even if not directly in GodsApp.
+Export
+
+CSV export for accounting/billing
+PDF activity report
+Per-client summary
+
+Settings (Activity Feed Settings sub-page)
+
+Enable activity tracking (toggle, default ON)
+Workspace-level opt-out (per workspace, exclude from tracking)
+Idle timeout (after X minutes of no input, pause time tracking)
+Default time tracking categories
+Pomodoro mode toggle (25 min focus / 5 min break)
+Default Pomodoro duration
+Notification sounds for break/focus
+Auto-pause activity when on lock screen
+Privacy mode (don't log specific commands, only categories)
+
+
+FEATURE 14 — Collaboration / Sharing
+Purpose
+Even solo users sometimes need to share an engagement bundle. Teams need shared workspaces.
+Implementation
+Encrypted workspace export
+"Share Workspace" button on every workspace:
+
+Bundles all evidence, findings, notes, scans, configurations
+Encrypts with user-supplied passphrase OR with recipient's public key
+Outputs a .gas file (GodsApp Share)
+Recipient opens GodsApp → File → Import Workspace → picks .gas file → enters passphrase → workspace imported
+
+Team mode (advanced)
+Optional team sync server (self-hostable):
+
+GodsApp Team Server — a small FastAPI service that syncs workspaces between team members
+Authentication via OIDC or API tokens
+Real-time sync of findings, evidence, notes
+Conflict resolution (last write wins by default, configurable)
+Audit log of who did what
+
+This is opt-in, not required. Solo users never see it.
+Live coediting (future v1.2 — not in v1.1 scope, mentioned only for awareness)
+Settings (Collaboration Settings sub-page)
+
+Export defaults (encryption method, included items)
+Team server URL (if configured)
+Team server credentials
+Sync policy (manual / auto on changes / scheduled)
+Conflict resolution preference
+Audit log retention
+
+
+FEATURE 15 — Burnout & QoL Features
+Purpose
+Real users do real work. Make GodsApp humane.
+Implementation
+Pomodoro Timer
+Built-in Pomodoro:
+
+25 min focus / 5 min break / 4 cycles → 30 min long break
+Customizable durations
+Subtle non-intrusive notifications
+Breaks recommend stretches / hydration / eye rest
+
+Auto-save everywhere
+Notes, findings, scan configurations, every form auto-saves to local drafts every 30 seconds. If GodsApp or the system crashes, recovery dialog on next launch.
+Crash recovery
+If GodsApp crashes mid-scan:
+
+On restart, detects unfinished scans
+Asks: "These scans were running when GodsApp closed: …. Resume them?"
+Resumes from last checkpoint (if the underlying tool supports it) or restarts
+
+Distraction-free mode
+F11 or View → Distraction Free:
+
+Hides sidebar, status bar, top bar
+Just the current view, full-screen
+For deep-focused work
+Exit with Esc
+
+Eye care
+Optional eye-care prompts:
+
+After X minutes of screen time, gentle "20-20-20 rule" reminder
+Optional blue-light shift after sunset
+
+Keyboard navigation
+Every UI element reachable via keyboard. Comprehensive keyboard shortcuts documented in Help → Shortcuts.
+Accessibility
+
+Full screen reader support (GTK4 + libadwaita give this mostly for free, but verify)
+High contrast mode
+Large text mode
+Reduced motion mode (disables matrix scramble, pulse animations for users sensitive to motion)
+Color blind friendly severity palette (configurable in Theme settings)
+
+Settings (Wellbeing Settings sub-page)
+
+Pomodoro defaults (durations, sounds, etc.)
+Auto-save interval
+Crash recovery (enabled / verify on launch)
+Distraction-free shortcut customization
+Eye care reminders (enabled, frequency)
+Blue light shift (enabled, schedule)
+Reduced motion (toggle)
+Color blind mode (off / protanopia / deuteranopia / tritanopia)
+Large text (toggle, multiplier)
+
+
+FEATURE 16 — Public Scope Verifier
+Purpose
+For bug bounty workflows: prevent accidentally scanning out-of-scope targets (which can be a CFAA violation).
+Implementation
+Every workspace has a scope definition. Before any tool launches a scan, GodsApp verifies the target is in-scope.
+Scope definition
+Workspaces have a structured scope:
+
+In-scope IP ranges (CIDRs)
+In-scope domains (with wildcard support: *.example.com)
+In-scope URLs (with path patterns)
+Out-of-scope items (explicit exclusions)
+Authorization document (optional file attachment — engagement letter)
+Authorization expiration date
+
+Pre-scan check
+When a user clicks "Run scan" on any tool, GodsApp:
+
+Extracts the target from the scan configuration
+Resolves hostname to IP if needed
+Checks against in-scope and out-of-scope lists
+If out-of-scope: blocks the scan, shows explanation
+If in-scope but auth doc expired: warns, requires confirmation
+If in-scope and auth valid: proceeds
+
+Bypass options
+
+Workspace setting "Allow out-of-scope" (default OFF) — user can override per workspace
+One-time bypass with explicit reason logged to audit log
+"Always allow this target" — adds it to in-scope after confirmation
+
+Visual indicator
+Top bar always shows current workspace's scope status:
+
+✅ Scope valid, auth in date
+⚠️ Scope valid, auth expiring soon
+🚫 Scope blocking attempted out-of-scope scan
+
+Settings (Scope Verifier sub-page)
+
+Master enable (default ON)
+Strict mode (default ON — blocks out-of-scope)
+Allow override with reason (toggle)
+Pre-scan check on all tools (toggle)
+Warn before auth document expires (days threshold)
+Log all overrides to audit log (mandatory ON)
+
+
+FEATURE 17 — Snapshot & Replay
+Purpose
+Capture a target's state at a point in time, replay your entire engagement against it later for comparison.
+Implementation
+Snapshot
+User clicks "Snapshot Target" on any asset:
+
+GodsApp runs a comprehensive scan against the target (Nmap full, service detection, banner grabbing, HTTP headers if web, screenshot if web)
+All output captured to evidence with a snapshot ID
+Snapshot ID becomes a reference point in time
+
+Replay
+User picks a snapshot and:
+
+Selects which past scans to replay
+GodsApp re-runs each scan with same parameters against the current state of the asset
+Side-by-side comparison shown
+Highlights what changed: new vulns appeared, fixed vulns confirmed, configuration drift
+
+Use case
+After a pentest, the client patches. They invite you back for a re-test. You replay the entire engagement → instant report on what's fixed and what's still vulnerable.
+Settings (Snapshot & Replay sub-page)
+
+Default snapshot tools (which tools run on Snapshot Target)
+Snapshot retention (days/forever)
+Auto-snapshot on engagement start (toggle)
+Auto-snapshot frequency for monitored assets
+Comparison sensitivity (what counts as a change)
+
+
+FEATURE 18 — Safe Mode
+Purpose
+Limit dangerous tools for training, students, supervised use.
+Implementation
+Toggle in Settings → General → Safe Mode.
+When Safe Mode is ON:
+
+Active exploitation tools are disabled
+Mass scanners (Masscan with rate >100, Nmap with -T5) are throttled
+Destructive options (e.g. SQLMap with --batch and --random-agent at the same time) require additional confirmation
+Reverse shell generation requires explicit acknowledgment
+Metasploit bridge disabled
+Payload generation disabled
+All other tools work normally
+
+Safe Mode can be set per workspace (e.g. enable for "Tutorial — Practice Engagement" workspace, disable for production engagements).
+Padlock indicator
+Sidebar shows a small padlock next to disabled tools when Safe Mode is on. Tooltip explains why.
+Settings (Safe Mode sub-page)
+
+Master toggle
+Per-tool override (advanced users can mark specific tools as always-allowed)
+Per-workspace override
+Require admin password to disable (for parental control / supervised use)
+Audit log on every Safe Mode toggle
+
+
+CROSS-CUTTING ADDITIONS
+These apply across all features:
+Settings architecture
+Every feature ships with:
+
+Its own sub-page in the master Settings view
+A gear icon on the feature's main view that jumps directly to those settings
+All settings explicitly documented in the Help section
+Settings are searchable from the Command Palette (Ctrl+K → "Settings: …" shows matching sub-pages)
+
+Visual identity continuity
+Every new feature respects v1.0's locked visual direction:
+
+Off-white/cream palette with transparency and frosted blur
+Matrix scramble effect on text transitions (loading, decoding, results appearing)
+Cloud + lightning logo pulsates on idle, "strikes" on events
+Active border glow/pulse on panels when significant events occur — severity-colored
+Smooth animations everywhere — no jarring transitions
+JetBrains Mono Nerd Font for code/output, clean sans-serif for body
+
+Quality bar (same as v1.0)
+
+Every button does something real
+Every page fully populated, no "Lorem ipsum" or "Coming soon"
+Designed empty states
+Every error caught and surfaced with actionable message
+Every destructive action requires confirmation
+No external network calls without user consent
+All secrets encrypted at rest
+
+Integration with existing v1.0 features
+
+All new features respect workspace boundaries
+All new features integrate with evidence locker (their outputs are captured)
+All new features that produce events can be promoted to findings
+All new features are searchable via the Command Palette
+All new features can be extended via the plugin system
+All new features are exposed via the REST API
+All new features have CLI equivalents where applicable
+
+Documentation
+
+Each feature has its own page in docs/features/<feature-name>.md
+Updated README with v1.1 feature list
+Updated CHANGELOG with detailed change log
+Updated PLUGIN_DEVELOPMENT with new plugin API hooks
+Updated API.md with new endpoints
+Updated CLI reference
+
+Testing
+
+Unit tests for every new feature
+Integration tests for workflows (e.g. "create finding → embed in notes → export report")
+UI smoke tests
+All tests passing in CI
+
+
+DELIVERY ORDER FOR v1.1
+When Replit starts on v1.1, suggest this order to keep momentum and ship in waves:
+Wave 1 — Quality of life (1-2 weeks)
+
+Onboarding Tour
+Learn Mode + per-tool tutorials
+Notes Sandbox
+Workspace Templates
+Wellbeing/QoL features
+
+Wave 2 — Productivity (1-2 weeks)
+
+Command Palette (Ctrl+K)
+Saved Searches / Smart Views
+Activity Feed / Time Tracking
+CVSS Calculator
+Report Studio
+
+Wave 3 — Advanced workflows (2-3 weeks)
+
+Findings Deduplication & Chaining
+Asset Timeline / Change History
+Snapshot & Replay
+Scope Verifier
+Safe Mode
+
+Wave 4 — Integrations & AI (2-3 weeks)
+
+Integrations Hub (one integration at a time, ship as each lands)
+AI Assistant Panel (opt-in)
+Collaboration / Sharing
+
+Total: 6-10 weeks of disciplined work to deliver all v1.1 features at v1.0 quality.

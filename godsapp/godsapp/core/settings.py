@@ -33,6 +33,13 @@ class APISettings(BaseModel):
     require_token: bool = True
 
 
+class LoginSettings(BaseModel):
+    enabled: bool = True
+    user: str = ""           # blank → defaults to $USER on first launch
+    salt: str = ""           # hex
+    pwhash: str = ""         # sha256 hex of (salt + password)
+
+
 class UISettings(BaseModel):
     theme: str = "dark"
     accent: str = "cream"
@@ -105,6 +112,7 @@ class Settings(BaseModel):
     threat: ThreatSettings = Field(default_factory=ThreatSettings)
     reports: ReportsSettings = Field(default_factory=ReportsSettings)
     terminal: TerminalSettings = Field(default_factory=TerminalSettings)
+    login: LoginSettings = Field(default_factory=LoginSettings)
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
     evidence: EvidenceSettings = Field(default_factory=EvidenceSettings)
     findings: FindingsSettings = Field(default_factory=FindingsSettings)

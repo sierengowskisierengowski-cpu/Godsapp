@@ -21,6 +21,17 @@ gi.require_version("Gtk", "4.0")
 from gi.repository import GLib, Gtk  # noqa: E402
 
 from godsapp.core.audio import play_async
+
+# Pool of ambient/strike thunder sounds. Picked at random for every strike so
+# the soundscape never repeats. Bundled .wav files live in resources/audio/.
+_AMBIENT_THUNDER = (
+    "thunder_distant.wav", "thunder_rumble.wav", "thunder_rolling.wav",
+    "thunder_distant.wav", "thunder_rumble.wav",
+)
+_STRIKE_THUNDER = (
+    "thunder_strike.wav", "thunder_crackle.wav", "thunder_close.wav",
+    "thunder_strike.wav",
+)
 from godsapp.core.logging import get_logger
 from godsapp.core.settings import load_settings
 
@@ -176,7 +187,9 @@ class LightningOverlay(Gtk.DrawingArea):
         self._flashes.append((now, 0.35, self._rng.uniform(0.35, 0.55)))
         # distant thunder, only if user has sounds on
         try:
-            play_async("thunder_distant.wav")
+            # Pick a different variant every time so it never feels repeated.
+            pool = _STRIKE_THUNDER if self._rng.random() < 0.35 else _AMBIENT_THUNDER
+            play_async(self._rng.choice(pool))
         except Exception:
             log.exception("storm thunder playback failed")
         # Kick the 30fps render loop for the duration of this strike.

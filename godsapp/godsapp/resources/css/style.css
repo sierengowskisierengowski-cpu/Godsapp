@@ -401,6 +401,48 @@ button.destructive-action:hover { background-color: alpha(@godsapp_critical,.34)
 .godsapp-splash .splash-progress { color: @godsapp_olympus; font-size: 10px; letter-spacing: 0.22em; }
 .godsapp-splash .splash-logo     { color: @godsapp_cloud_high; }
 
+/* ── login gate ────────────────────────────────────────────────────── */
+.login-window { background: transparent; }
+.login-window .login-title {
+  font-size: 26px; font-weight: 900; letter-spacing: 0.42em;
+  color: @godsapp_cloud_high;
+  text-shadow: 0 0 18px alpha(@godsapp_cloud_high, .65),
+               0 0 36px alpha(@godsapp_olympus, .55);
+  margin-top: 8px;
+}
+.login-window .login-sub {
+  font-size: 12px; letter-spacing: 0.22em;
+  color: @godsapp_olympus; opacity: 0.85;
+}
+.login-window .login-logo { animation: bolt-pulse 2.2s ease-in-out infinite; }
+.login-window .login-logo-fallback {
+  font-size: 76px; color: @godsapp_olympus;
+  text-shadow: 0 0 22px alpha(@godsapp_olympus, .85);
+  animation: bolt-pulse 2.2s ease-in-out infinite;
+}
+.login-window .login-hint { color: @godsapp_muted; font-size: 10px; letter-spacing: 0.18em; }
+.login-window .login-error {
+  color: #ff8a8a; font-size: 12px; letter-spacing: 0.05em;
+  text-shadow: 0 0 10px alpha(#ff5050, .55);
+  min-height: 16px;
+}
+.login-window .login-submit {
+  padding: 10px 28px;
+  font-weight: 800; letter-spacing: 0.28em;
+  background: linear-gradient(135deg, alpha(@godsapp_olympus,.85), alpha(@godsapp_cloud_high,.45));
+  color: #0b1020;
+  box-shadow: 0 0 24px alpha(@godsapp_olympus, .55),
+              inset 0 0 0 1px alpha(@godsapp_cloud_high, .35);
+}
+.login-window.login-shake { animation: login-shake-anim 0.5s ease-in-out 1; }
+@keyframes login-shake-anim {
+   0%, 100% { margin-left: 0; }
+  20%  { margin-left: -8px; }
+  40%  { margin-left:  8px; }
+  60%  { margin-left: -5px; }
+  80%  { margin-left:  3px; }
+}
+
 /* ── slide-down terminal overlay ────────────────────────────────────── */
 .title-box-clickable { padding: 2px 8px; border-radius: 8px; }
 .title-box-clickable:hover {

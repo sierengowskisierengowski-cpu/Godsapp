@@ -164,12 +164,17 @@ class MainWindow(Adw.ApplicationWindow):
         # The storm is a transparent click-through Cairo layer; the
         # terminal is a Gtk.Revealer that drops down from the top when
         # the user double-clicks the GodsApp title in the header bar.
+        # Z-order, bottom → top:
+        #   storm (background lightning)
+        #   toolbar_view (header + body, panels are translucent so storm shows through)
+        #   terminal_overlay (slides down over everything when summoned)
         root_overlay = Gtk.Overlay()
-        root_overlay.set_child(toolbar_view)
+        self._storm = LightningOverlay()
+        root_overlay.set_child(self._storm)
+        toolbar_view.set_hexpand(True); toolbar_view.set_vexpand(True)
+        root_overlay.add_overlay(toolbar_view)
         self._terminal_overlay = TerminalOverlay(self)
         root_overlay.add_overlay(self._terminal_overlay)
-        self._storm = LightningOverlay()
-        root_overlay.add_overlay(self._storm)
         self.set_content(root_overlay)
 
         # Health refresh

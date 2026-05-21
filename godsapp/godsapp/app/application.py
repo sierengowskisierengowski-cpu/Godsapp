@@ -17,6 +17,7 @@ from godsapp.core.scheduler import scheduler
 from godsapp.core.settings import load_settings
 from godsapp.db import init_db
 from godsapp.tools import registry
+from godsapp.ui.login import show_login
 from godsapp.ui.main_window import MainWindow
 from godsapp.ui.views.splash import show_splash
 
@@ -67,10 +68,13 @@ class GodsAppApplication(Adw.Application):
                 self._window = MainWindow(self)
             self._window.present()
 
+        def _show_login_then_main() -> None:
+            show_login(self, on_success=_show_main)
+
         if wants_splash:
-            self._splash = show_splash(self, on_done=_show_main)
+            self._splash = show_splash(self, on_done=_show_login_then_main)
         else:
-            _show_main()
+            _show_login_then_main()
 
     def do_shutdown(self) -> None:  # type: ignore[override]
         try:

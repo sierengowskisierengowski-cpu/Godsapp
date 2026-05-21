@@ -119,17 +119,21 @@ class SplashWindow(Adw.Window):
             (0.55, 0.55, 0.85),   # strike 1
             (1.55, 0.60, 0.95),   # strike 2
             (2.55, 0.65, 1.05),   # strike 3
-            (3.30, 0.90, 1.20),   # finale — multiple bolts via the draw loop
+            (3.30, 0.90, 1.20),   # boom
+            (4.40, 0.55, 0.95),   # encore strike
+            (5.10, 0.85, 1.15),   # finale
         ]
         self._fired = [False]*len(self._schedule)
 
-        # phase labels
+        # phase labels (extended to ~6.5s total)
         self._phase_until = [
             (0.4,  ""),
-            (0.8,  "GATHERING THE STORM"),
-            (1.8,  "SUMMONING ZEUS"),
-            (2.8,  "FORGING THE BOLT"),
-            (3.6,  "STRIKE"),
+            (0.9,  "GATHERING THE STORM"),
+            (1.9,  "SUMMONING ZEUS"),
+            (2.9,  "FORGING THE BOLT"),
+            (3.7,  "STRIKE"),
+            (4.7,  "RIDING THE THUNDER"),
+            (5.6,  "ASCENDING OLYMPUS"),
             (10.0, "OPEN THE GATES"),
         ]
 
@@ -161,8 +165,8 @@ class SplashWindow(Adw.Window):
         self._strikes = [s for s in self._strikes if now - s.born < s.duration]
         self._flashes = [f for f in self._flashes if now - f[0] < f[1]]
         self._da.queue_draw()
-        # End at ~4.4s (audio is 5s but the boom tail can ride the main UI)
-        if t >= 4.4:
+        # End at ~6.4s — gives the user time to soak in the storm before the gate opens.
+        if t >= 6.4:
             self._finish()
             return False
         return True
