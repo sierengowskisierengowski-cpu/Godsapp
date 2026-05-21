@@ -46,7 +46,7 @@ class DashboardView(Gtk.Box):
         inner.append(page_header(
             f"Welcome to {__app_name__}",
             on_settings=lambda: open_settings(parent),
-            subtitle="Professional security auditing & research. Press Ctrl+K to jump to anything.",
+            subtitle="Professional security auditing and research. Press Ctrl+K to jump to anything.",
         ))
 
         # KPI tiles

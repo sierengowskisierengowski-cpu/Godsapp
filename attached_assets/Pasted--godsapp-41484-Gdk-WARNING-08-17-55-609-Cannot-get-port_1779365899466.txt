@@ -1,0 +1,36 @@
+
+(godsapp:41484): Gdk-WARNING **: 08:17:55.609: Cannot get portal org.freedesktop.portal.Inhibit version: GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: No such interface “org.freedesktop.portal.Inhibit”
+2026-05-21 08:17:55 [INFO] godsapp.core.scheduler: scheduler started
+
+(godsapp:41484): Gdk-WARNING **: 08:17:55.979: vkQueuePresentKHR(): A swapchain no longer matches the surface properties exactly, but can still be used to present to the surface successfully. (VK_SUBOPTIMAL_KHR) (1000001003)
+
+(godsapp:41484): Gdk-WARNING **: 08:17:55.981: vkQueuePresentKHR(): A swapchain no longer matches the surface properties exactly, but can still be used to present to the surface successfully. (VK_SUBOPTIMAL_KHR) (1000001003)
+
+(godsapp:41484): Gdk-WARNING **: 08:17:55.988: vkAcquireNextImageKHR(): A swapchain no longer matches the surface properties exactly, but can still be used to present to the surface successfully. (VK_SUBOPTIMAL_KHR) (1000001003)
+
+(godsapp:41484): Gtk-CRITICAL **: 08:17:57.433: gtk_box_append: assertion 'gtk_widget_get_parent (child) == NULL' failed
+
+(godsapp:41484): Gtk-CRITICAL **: 08:17:57.435: gtk_box_append: assertion 'gtk_widget_get_parent (child) == NULL' failed
+
+(godsapp:41484): Gtk-CRITICAL **: 08:17:57.437: gtk_box_append: assertion 'gtk_widget_get_parent (child) == NULL' failed
+
+(godsapp:41484): Gtk-CRITICAL **: 08:17:57.438: gtk_box_append: assertion 'gtk_widget_get_parent (child) == NULL' failed
+
+(godsapp:41484): Gtk-CRITICAL **: 08:17:57.439: gtk_box_append: assertion 'gtk_widget_get_parent (child) == NULL' failed
+
+(godsapp:41484): Gtk-CRITICAL **: 08:17:57.440: gtk_box_append: assertion 'gtk_widget_get_parent (child) == NULL' failed
+
+(godsapp:41484): Gtk-CRITICAL **: 08:17:57.443: gtk_box_append: assertion 'gtk_widget_get_parent (child) == NULL' failed
+
+(godsapp:41484): Gtk-CRITICAL **: 08:17:57.444: gtk_box_append: assertion 'gtk_widget_get_parent (child) == NULL' failed
+
+(godsapp:41484): Gtk-WARNING **: 08:17:57.470: Failed to set text 'Security auditing & research suite.' from markup due to error parsing markup: Error on line 1: Entity did not end with a semicolon; most likely you used an ampersand character without intending to start an entity — escape ampersand as &amp;
+
+(godsapp:41484): Gdk-WARNING **: 08:17:57.732: vkQueuePresentKHR(): A swapchain no longer matches the surface properties exactly, but can still be used to present to the surface successfully. (VK_SUBOPTIMAL_KHR) (1000001003)
+
+(godsapp:41484): Gdk-WARNING **: 08:17:57.739: vkAcquireNextImageKHR(): A swapchain no longer matches the surface properties exactly, but can still be used to present to the surface successfully. (VK_SUBOPTIMAL_KHR) (1000001003)
+2026-05-21 08:18:05 [INFO] godsapp.core.scheduler: scheduler stopping
+2026-05-21 08:18:05 [INFO] godsapp.core.scheduler: scheduler stopping
+#!/usr/bin/env bash
+exec "/opt/godsapp/venv/bin/godsapp" "$@"
+[cosmic@nyx-cosmic godsapp-v0.3.1]$

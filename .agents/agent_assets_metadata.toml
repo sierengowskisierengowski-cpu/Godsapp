@@ -48,3 +48,15 @@ id = "cyKkoJD9N_oN7HhFYg9Lo"
 uri = "file://godsapp-v0.3.3.zip"
 type = "unspecified"
 title = "GodsApp v0.3.3 — packaging fix + baked sky (zip)"
+
+[[outputs]]
+id = "mt0LSe_y_g1TPIXc_ugz9"
+uri = "file://godsapp-v0.3.4.tar.gz"
+type = "unspecified"
+title = "GodsApp v0.3.4 — baked sky + packaging fix + markup fix (tarball)"
+
+[[outputs]]
+id = "K_ix391yBu1RZulFAn2jb"
+uri = "file://godsapp-v0.3.4.zip"
+type = "unspecified"
+title = "GodsApp v0.3.4 — baked sky + packaging fix + markup fix (zip)"

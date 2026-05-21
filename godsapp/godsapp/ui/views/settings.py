@@ -308,7 +308,7 @@ class SettingsView(Gtk.Box):
 
     def _build_about_page(self) -> Gtk.Widget:
         page = Adw.PreferencesPage()
-        g = Adw.PreferencesGroup(title="GodsApp", description="Security auditing & research suite.")
+        g = Adw.PreferencesGroup(title="GodsApp", description="Security auditing and research suite.")
         for label, value in [
             ("Version", __version__),
             ("Author",  "Joseph Sierengowski"),
