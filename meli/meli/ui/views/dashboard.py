@@ -132,6 +132,7 @@ class DashboardView(Gtk.Box):
             now = datetime.now(timezone.utc)
             ago_24h = now - timedelta(hours=24)
             ago_1h = now - timedelta(hours=1)
+            ago_7d = now - timedelta(days=7)
 
             with get_db() as db:
                 total = db.execute(select(func.count(Event.id))).scalar() or 0
@@ -140,6 +141,10 @@ class DashboardView(Gtk.Box):
                 ).scalar() or 0
                 last_1h = db.execute(
                     select(func.count(Event.id)).where(Event.timestamp >= ago_1h)
+                ).scalar() or 0
+                # 7-day rolling — feeds the centerpiece honey pot.
+                last_7d = db.execute(
+                    select(func.count(Event.id)).where(Event.timestamp >= ago_7d)
                 ).scalar() or 0
                 critical_unacked = db.execute(
                     select(func.count(Alert.id)).where(
@@ -184,15 +189,18 @@ class DashboardView(Gtk.Box):
                 honeypots = db.execute(select(Honeypot)).scalars().all()
                 health_data = [(h.name, h.honeypot_type, h.enabled, h.last_event_at) for h in honeypots]
 
-            GLib.idle_add(self._update_ui, total, last_24h, last_1h, critical_unacked,
+            GLib.idle_add(self._update_ui, total, last_24h, last_1h, last_7d, critical_unacked,
                           sev_data, list(top_attk), list(top_creds), recent_data, health_data)
         except Exception as e:
             log.error("Dashboard load failed", error=str(e))
 
-    def _update_ui(self, total, last_24h, last_1h, critical_unacked,
+    def _update_ui(self, total, last_24h, last_1h, last_7d, critical_unacked,
                    sev_data, top_attk, top_creds, recent_data, health_data) -> bool:
         if self._honey_pot is not None:
-            self._honey_pot.set_event_count(total)
+            # Pot represents a rolling 7-day window so it fills visibly on
+            # a fresh install, drains gently during quiet stretches, and
+            # still spikes hard on an active attack burst.
+            self._honey_pot.set_event_count(last_7d)
         self._update_card(self._card_total, f"{total:,}")
         self._update_card(self._card_24h, f"{last_24h:,}")
         self._update_card(self._card_1h, f"{last_1h:,}")

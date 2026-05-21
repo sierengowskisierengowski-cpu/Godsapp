@@ -186,7 +186,8 @@ def paint_pot(cr: cairo.Context, width: int, height: int, *,
               pulse_color=None,
               pulse_alpha: float = 0.0,
               wobble_phase: float = 0.0,
-              show_label: bool = True) -> None:
+              show_label: bool = True,
+              window_label: str = "last 7 days") -> None:
     """Paint the amphora into the given Cairo context.
 
     fill: 0.0–1.0 honey level
@@ -317,7 +318,7 @@ def paint_pot(cr: cairo.Context, width: int, height: int, *,
 
         cr.set_source_rgba(*PALE_COMB, 0.6)
         cr.set_font_size(10)
-        pct = f"{int(round(fill * 100))}% full"
+        pct = f"{window_label} · {int(round(fill * 100))}% full"
         ex2 = cr.text_extents(pct)
         cr.move_to(cx - ex2.width / 2, _FOOT_BOT_Y + 32)
         cr.show_text(pct)
@@ -333,13 +334,14 @@ class HoneyPotWidget(Gtk.DrawingArea):
         set_max_events(n)    — change the "100% full" threshold
     """
 
-    def __init__(self, max_events: int = 10000):
+    def __init__(self, max_events: int = 5000, window_label: str = "last 7 days"):
         super().__init__()
         self.set_size_request(CANVAS_W, CANVAS_H)
         self.set_content_width(CANVAS_W)
         self.set_content_height(CANVAS_H)
         self.set_draw_func(self._draw)
 
+        self._window_label = window_label
         self._max_events = max(1, max_events)
         self._target_fill = 0.0
         self._current_fill = 0.0
@@ -441,6 +443,7 @@ class HoneyPotWidget(Gtk.DrawingArea):
             pulse_color=pulse_color,
             pulse_alpha=pulse_alpha,
             wobble_phase=self._wobble_phase,
+            window_label=self._window_label,
         )
 
 
