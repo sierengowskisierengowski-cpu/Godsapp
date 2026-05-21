@@ -1,6 +1,19 @@
+# Sierengowski workspace — GodsApp + Meli
+
+This Replit workspace is the source-of-truth repository for **two** native GTK4 + libadwaita Linux desktop apps by Joseph Sierengowski. Both are installed and run on Linux (COSMIC, GNOME, KDE — anything with GTK4 + libadwaita); neither can render in Replit's preview pane (GTK4 needs an X/Wayland display).
+
+| Project | Lives at | GitHub | Status |
+|---------|----------|--------|--------|
+| **GodsApp** — security auditing & research suite | `./godsapp/` | `sierengowskisierengowski-cpu/Godsapp` | v0.6.0 — done, in maintenance |
+| **Meli** — honeypot command center | `./meli/` | `sierengowskisierengowski-cpu/Meli` | v1.0.0 — active development |
+
+Each project ships its own `install.sh`, `pyproject.toml`, systemd units, and packaging recipes. They share nothing in code and have different licenses (GodsApp = GPL-3.0-or-later, Meli = MIT).
+
+---
+
 # GodsApp
 
-Native GTK4 + libadwaita desktop application providing a unified interface for security auditing & research (recon, web app testing, network analysis, password auditing, exploitation, OSINT, forensics, malware analysis, crypto, mobile, cloud, wireless). Built by Joseph Sierengowski. This Replit workspace is the source-of-truth repository — the app itself is installed and run on a Linux desktop (COSMIC, GNOME, KDE — anything with GTK4 + libadwaita).
+Native GTK4 + libadwaita desktop application providing a unified interface for security auditing & research (recon, web app testing, network analysis, password auditing, exploitation, OSINT, forensics, malware analysis, crypto, mobile, cloud, wireless).
 
 ## Source of truth
 
@@ -58,7 +71,59 @@ System prereqs (one-time): `python3 (>=3.12) python-gobject gtk4 libadwaita`.
 
 ## Replit workspace notes
 
-The only other thing in the workspace is `artifacts/mockup-sandbox/` — Replit canvas infrastructure, untouched. The Python app cannot render in Replit's preview pane (GTK4 needs an X/Wayland display); development feedback loop is: the user installs locally on their COSMIC machine and reports bugs.
+The other things in the workspace are `./meli/` (the second app — see below), and `artifacts/mockup-sandbox/` — Replit canvas infrastructure, untouched. The Python app cannot render in Replit's preview pane (GTK4 needs an X/Wayland display); development feedback loop is: the user installs locally on their COSMIC machine and reports bugs.
+
+---
+
+# Meli — Honeypot Command Center
+
+Source: `./meli/` — pulled into this workspace from `https://github.com/sierengowskisierengowski-cpu/Meli` so it can be edited alongside GodsApp.
+
+```
+meli/
+    pyproject.toml          # setuptools backend, version 1.0.0
+    install.sh              # installs into /opt/meli/{venv,app}
+    uninstall.sh
+    meli.service            # main daemon systemd user unit
+    meli-ingest.service     # HTTP/MQTT ingestion daemon
+    meli.desktop            # XDG launcher
+    PKGBUILD                # Arch packaging
+    requirements.txt
+    packages.txt            # system deps list
+    meli/                   # the actual Python package
+        app.py              # GTK Adw.Application bootstrap
+        auth.py             # Argon2id master password + TOTP 2FA
+        config.py
+        alerts/             # rule engine + 7 notification channels
+        classification/     # YAML rules, severity, IOC matching
+        database/           # SQLAlchemy 2.x models + backup
+        enrichment/         # AbuseIPDB / GreyNoise / VT / Shodan / IPInfo / GeoIP
+        ingest/             # MQTT consumer + HTTP daemon + 7 honeypot parsers
+        reports/            # PDF / Markdown / JSON / CSV generators
+        ui/                 # 14 views (dashboard, live feed, geo map, …)
+        utils/
+    assets/                 # icons + alert sounds
+    docs/                   # CHANGELOG, INSTALL, ARCHITECTURE, …
+    tests/
+    scripts/
+```
+
+## Run & operate (on the user's Linux box)
+
+- Install: `sudo ./install.sh` (drops to `/opt/meli`, registers `meli.service` + `meli-ingest.service` as systemd user units)
+- Launch GUI: `meli`
+- Ingest endpoint: HTTP POST on port 17654, or MQTT topic `meli/events/ingest`
+- Uninstall: `sudo ./uninstall.sh`
+
+## Storage
+
+- Config: `~/.config/meli/` (config.toml, secrets)
+- Data:   `~/.local/share/meli/` (meli.db, logs/, backups/, geoip/)
+- DB:     SQLite by default
+
+## Status — v1.0.0 (current shipping)
+
+14 dashboard views, 7 honeypot parsers (Cowrie / Heralding / Dionaea / HTTP / Glastopf / Mailoney / Generic JSON), 16-rule classification engine, 6 IP-enrichment services, 7 alert notification channels, full setup wizard with Argon2id + TOTP. See `meli/docs/CHANGELOG.md` for the full v1.0.0 surface.
 
 ## User preferences
 
