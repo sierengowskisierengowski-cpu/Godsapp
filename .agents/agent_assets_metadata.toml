@@ -144,3 +144,9 @@ id = "_qViDjc86FGHCQ-zopw23"
 uri = "file://meli/docs/honeypot_centerpiece_states.png"
 type = "image"
 title = "Amphora centerpiece — empty / active / overflowing"
+
+[[outputs]]
+id = "qWzo8KwYf19TK_wSXIbu4"
+uri = "file://dist/meli-1.0.0-labyrinth.tar.gz"
+type = "unspecified"
+title = "Meli v1.0.0 + Labyrinth tarpit — ready to push"
